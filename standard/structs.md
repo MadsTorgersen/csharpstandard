@@ -25,17 +25,6 @@ non_record_struct_declaration
       identifier type_parameter_list? struct_interfaces?
       type_parameter_constraints_clause* struct_body ';'?
     ;
-
-record_struct_declaration
-    : attributes? struct_modifier* 'partial'? 'record' 'struct'
-      identifier type_parameter_list? delimited_parameter_list? struct_interfaces?
-      type_parameter_constraints_clause* record_struct_body
-    ;
-
-record_struct_body
-    : struct_body ';'?
-    | ';'
-    ;
 ```
 
 There are two kinds of struct: ***non-record struct***, as declared by *non_record_struct_declaration*, and ***record struct***, as declared by  *record_struct_declaration*. A non-record struct is the kind of struct that C# has supported since the language’s inception. Record structs were added much later and are discussed in [§16.4](structs.md#164-record-structs). The differences between the two kinds are discussed in [§16.5](structs.md#165-record-struct-and-non-record-struct-differences).
@@ -253,7 +242,7 @@ The members provided by the implementation are described in the following subcla
 
 #### 16.4.4.2 Primary constructors
 
-As with a non-record class, a non-record struct with a *delimited_parameter_list* has a primary constructor provided by the implementation. The semantics of the non-record class version apply here as well and are augmented by the text in this subclause.
+As with a non-record class, a non-record struct with a *delimited_parameter_list* has a primary constructor ([§15.16.6.6.2](classes.md#1516662-primary-constructor)) provided by the implementation. The semantics of the non-record class version apply here as well and are augmented by the text in this subclause.
 
 In the case of a non-record class, the implementation shall provide a private, init-only field for each parameter. However, for a non-record struct, the storage is read-write and provided in some unspecified manner.
 
@@ -261,7 +250,7 @@ Instance field declarations for a non-record struct are permitted to include var
 
 #### 16.4.4.3 Equality members
 
-The provided equality members are similar to those for a record class ([§15.16.2](classes.md#15162-class-base-specification)), except for the lack of method `EqualityContract`, null checks, or inheritance.
+The provided equality members are similar to those for a record class ([§15.16.6.3](classes.md#151663-equality-members)), except for the lack of method `EqualityContract`, null checks, or inheritance.
 
 A record struct `R` implements `System.IEquatable<R>` and includes a synthesized strongly-typed overload of `Equals(R other)`, which is public, as follows:
 

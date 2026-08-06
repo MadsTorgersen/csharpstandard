@@ -654,7 +654,6 @@
     - [§15.11.3](classes.md#15113-instance-variable-initializers)  Instance variable initializers
     - [§15.11.4](classes.md#15114-constructor-execution)  Constructor execution
     - [§15.11.5](classes.md#15115-default-constructors)  Default constructors
-    - [§15.11.6](classes.md#15116-copy-constructors)  Copy constructors
   - [§15.12](classes.md#1512-static-constructors)  Static constructors
   - [§15.13](classes.md#1513-finalizers)  Finalizers
   - [§15.14](classes.md#1514-async-functions)  Async Functions
