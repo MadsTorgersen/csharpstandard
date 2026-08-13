@@ -733,7 +733,13 @@ When arguments are omitted from a function member with corresponding optional pa
 
 #### 12.6.3.1 General
 
-When a generic method is called without specifying type arguments, a ***type inference*** process attempts to infer type arguments for the call. The presence of type inference allows a more convenient syntax to be used for calling a generic method, and allows the programmer to avoid specifying redundant type information.
+***Type inference*** is a binding-time mechanism for inferring one or more types in a given context. It is used in the following contexts:
+
+- Invocation of a generic method named in an *invocation_expression* (§type-inference-for-method-invocations-new-clause).
+- Conversion of method groups with generic overloads ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)).
+- Finding the best common type of a set of expressions ([§12.6.3.17](expressions.md#126317-finding-the-best-common-type-of-a-set-of-expressions)).
+
+The presence of type inference allows a more convenient syntax to be used for calling a generic method and allows the programmer to avoid specifying redundant type information.
 
 > *Example*:
 >
@@ -761,13 +767,16 @@ When a generic method is called without specifying type arguments, a ***type inf
 >
 > *end example*
 
-Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find any applicable methods.
+For a generic construct, type inference uses the following information from its declaration:
 
-If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails. Otherwise, assume that the generic method has the following signature:
+- A list of type parameters `X₁...Xᵥ` and any constraints they have.
+- A list of parameter types `T₁...Tₓ`.
 
-`Tₑ M<X₁...Xᵥ>(T₁ p₁ ... Tₓ pₓ)`
+In addition, it uses the following information from the context where the generic construct is used:
 
-With a method call of the form `M(E₁ ...Eₓ)` the task of type inference is to find unique type arguments `S₁...Sᵥ` for each of the type parameters `X₁...Xᵥ` so that the call `M<S₁...Sᵥ>(E₁...Eₓ)` becomes valid.
+- A list of argument expressions `E₁...Eₓ`, each corresponding to one of the parameter types `T₁...Tₓ`.
+
+Type inference for a particular context specifies these inputs as applicable. Type inference, if it succeeds, produces a list of type arguments `A₁...Aᵥ`, each corresponding to one of the type parameters `X₁...Xᵥ`.
 
 The process of type inference is described below as an algorithm. A conformant compiler may be implemented using an alternative approach, provided it reaches the same result in all cases.
 
@@ -775,11 +784,9 @@ During the process of inference each type parameter `Xᵢ` is either *fixed* to
 
 Type inference takes place in phases. Each phase will try to infer type arguments for more type variables based on the findings of the previous phase. The first phase makes some initial inferences of bounds, whereas the second phase fixes type variables to specific types and infers further bounds. The second phase may have to be repeated a number of times.
 
-> *Note*: Type inference is also used in other contexts including for conversion of method groups ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)) and finding the best common type of a set of expressions ([§12.6.3.17](expressions.md#126317-finding-the-best-common-type-of-a-set-of-expressions)). *end note*
-
 #### 12.6.3.2 The first phase
 
-For each of the method arguments `Eᵢ`, an input type inference ([§12.6.3.7](expressions.md#12637-input-type-inferences)) is made from `Eᵢ` to the corresponding parameter type `Tᵢ`.
+For each argument expression `Eᵢ`, an input type inference ([§12.6.3.7](expressions.md#12637-input-type-inferences)) is made from `Eᵢ` to the corresponding parameter type `Tᵢ`.
 
 #### 12.6.3.3 The second phase
 
@@ -1021,6 +1028,18 @@ The ***inferred return type*** is determined as follows:
 An *explicit return type inference* is made *from* an expression `E` *to* a type `T` in the following way:
 
 - If `E` is an anonymous function with explicit return type `Uᵣ`, and `T` is a delegate type or expression tree type with return type `Vᵣ`, then an *exact inference* ([§12.6.3.10](expressions.md#126310-exact-inferences)) is made *from* `Uᵣ` *to* `Vᵣ`.
+
+#### §type-inference-for-method-invocations-new-clause Type inference for method invocations
+
+Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find any applicable methods.
+
+If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails.
+
+Type parameters and parameter types are determined from the generic method declaration.
+
+Argument expressions are determined from the invocation expression:
+
+`M(E₁ ...Eₓ)`
 
 #### 12.6.3.16 Type inference for conversion of method groups
 
@@ -2218,7 +2237,7 @@ The binding-time processing of a method invocation of the form `M(A)`, where `M`
     - `M` has no type argument list, and
     - `F` is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)).
   - If `F` is generic and `M` has no type argument list, `F` is a candidate when:
-    - Type inference ([§12.6.3](expressions.md#1263-type-inference)) succeeds, inferring a list of type arguments for the call, and
+    - Type inference (§type-inference-for-method-invocations-new-clause) succeeds, inferring a list of type arguments for the call, and
     - Once the inferred type arguments are substituted for the corresponding method type parameters, all constructed types in the parameter list of `F` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `F` is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member))
   - If `F` is generic and `M` includes a type argument list, `F` is a candidate when:
     - `F` has the same number of method type parameters as were supplied in the type argument list, and
