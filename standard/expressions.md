@@ -733,7 +733,13 @@ When arguments are omitted from a function member with corresponding optional pa
 
 #### 12.6.3.1 General
 
-When a generic method is called without specifying type arguments, a ***type inference*** process attempts to infer type arguments for the call. The presence of type inference allows a more convenient syntax to be used for calling a generic method, and allows the programmer to avoid specifying redundant type information.
+***Type inference*** is a binding-time mechanism for inferring one or more types in a given context. It is used in the following contexts:
+
+- Invocation of a generic method named in an *invocation_expression* (§type-inference-for-method-invocations-new-clause).
+- Conversion of method groups with generic overloads ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)).
+- Finding the best common type of a set of expressions ([§12.6.3.17](expressions.md#126317-finding-the-best-common-type-of-a-set-of-expressions)).
+
+The presence of type inference allows a more convenient syntax to be used for calling a generic method and allows the programmer to avoid specifying redundant type information.
 
 > *Example*:
 >
@@ -761,13 +767,18 @@ When a generic method is called without specifying type arguments, a ***type inf
 >
 > *end example*
 
-Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find any applicable methods.
+For a generic construct, type inference uses the following information from its declaration:
 
-If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails. Otherwise, assume that the generic method has the following signature:
+- A list of type parameters `X₁...Xᵥ` and any constraints they have.
+- A list of parameter types `T₁...Tₓ`.
+- Optionally, a result type `T₀`, including whether the result is by-value or has a *ref_kind*.
 
-`Tₑ M<X₁...Xᵥ>(T₁ p₁ ... Tₓ pₓ)`
+In addition, it uses the following information from the context where the generic construct is used:
 
-With a method call of the form `M(E₁ ...Eₓ)` the task of type inference is to find unique type arguments `S₁...Sᵥ` for each of the type parameters `X₁...Xᵥ` so that the call `M<S₁...Sᵥ>(E₁...Eₓ)` becomes valid.
+- A list of argument expressions `E₁...Eₓ`, each corresponding to one of the parameter types `T₁...Tₓ`.
+- Optionally, a target type `Tₑ` corresponding to the result type `T₀`, including whether the target is by-value or has a *ref_kind*.
+
+Type inference for a particular context specifies these inputs as applicable. Type inference, if it succeeds, produces a list of type arguments `A₁...Aᵥ`, each corresponding to one of the type parameters `X₁...Xᵥ`.
 
 The process of type inference is described below as an algorithm. A conformant compiler may be implemented using an alternative approach, provided it reaches the same result in all cases.
 
@@ -775,11 +786,14 @@ During the process of inference each type parameter `Xᵢ` is either *fixed* to
 
 Type inference takes place in phases. Each phase will try to infer type arguments for more type variables based on the findings of the previous phase. The first phase makes some initial inferences of bounds, whereas the second phase fixes type variables to specific types and infers further bounds. The second phase may have to be repeated a number of times.
 
-> *Note*: Type inference is also used in other contexts including for conversion of method groups ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)) and finding the best common type of a set of expressions ([§12.6.3.17](expressions.md#126317-finding-the-best-common-type-of-a-set-of-expressions)). *end note*
-
 #### 12.6.3.2 The first phase
 
-For each of the method arguments `Eᵢ`, an input type inference ([§12.6.3.7](expressions.md#12637-input-type-inferences)) is made from `Eᵢ` to the corresponding parameter type `Tᵢ`.
+For each argument expression `Eᵢ`, an input type inference ([§12.6.3.7](expressions.md#12637-input-type-inferences)) is made from `Eᵢ` to the corresponding parameter type `Tᵢ`.
+
+Additionally, if both a result type `T₀` and a target type `Tₑ` are supplied:
+
+- If both are by-value, an *upper-bound inference* ([§12.6.3.12](expressions.md#126312-upper-bound-inferences)) is made from `Tₑ` to `T₀`.
+- If both are by-ref, an *exact inference* ([§12.6.3.10](expressions.md#126310-exact-inferences)) is made from `Tₑ` to `T₀`.
 
 #### 12.6.3.3 The second phase
 
@@ -1022,11 +1036,43 @@ An *explicit return type inference* is made *from* an expression `E` *to* a type
 
 - If `E` is an anonymous function with explicit return type `Uᵣ`, and `T` is a delegate type or expression tree type with return type `Vᵣ`, then an *exact inference* ([§12.6.3.10](expressions.md#126310-exact-inferences)) is made *from* `Uᵣ` *to* `Vᵣ`.
 
+#### §type-inference-for-method-invocations-new-clause Type inference for method invocations
+
+Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find any applicable methods.
+
+If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails.
+
+Type parameters, parameter types, and the result type are determined from the generic method declaration:
+
+`T₀ M<X₁...Xᵥ>(T₁ p₁ ... Tₓ pₓ)`
+
+However, if the return type is `void`, then no result type `T₀` is used for the inference. Otherwise, whether the result is by-value or its *ref_kind* is determined from the method declaration.
+
+Argument expressions are determined from the invocation expression:
+
+`M(E₁ ...Eₓ)`
+
+Additionally, `Tₑ` is the target type of the method invocation, if it has one, including whether the target is by-value or its *ref_kind*.
+
+**TBD**: The precise meaning and source of the target type and *ref_kind* of a method invocation depends on the target-typing model.
+
+> *Example*:
+>
+> ```csharp
+> static IEnumerable<T> Create<T>() => default!;
+>
+> IEnumerable<string> values = Create();
+> ```
+>
+> The target type of the invocation is `IEnumerable<string>`, and its result type is `IEnumerable<T>`. Upper-bound inference from the target type to the result type produces an upper bound of `string` for `T`, so `T` is inferred to be `string`.
+>
+> *end example*
+
 #### 12.6.3.16 Type inference for conversion of method groups
 
 Similar to calls of generic methods, type inference shall also be applied when a method group `M` containing a generic method is converted to a given delegate type `D` ([§10.8](conversions.md#108-method-group-conversions)). Given a method
 
-`Tₑ M<X₁...Xᵥ>(T₁ x₁ ... Tₑ xₑ)`
+`T₀ M<X₁...Xᵥ>(T₁ x₁ ... Tₓ xₓ)`
 
 and the method group `M` being assigned to the delegate type `D` the task of type inference is to find type arguments `S₁...Sᵥ` so that the expression:
 
@@ -1036,7 +1082,7 @@ becomes compatible ([§21.2](delegates.md#212-delegate-declarations)) with `D`.
 
 Unlike the type inference algorithm for generic method calls, in this case, there are only argument *types*, no argument *expressions*. In particular, there are no anonymous functions and hence no need for multiple phases of inference.
 
-Instead, all `Xᵢ` are considered *unfixed*, and a *lower-bound inference* is made *from* each argument type `Uₑ` of `D` *to* the corresponding parameter type `Tₑ` of `M`. If for any of the `Xᵢ` no bounds were found, type inference fails. Otherwise, all `Xᵢ` are *fixed* to corresponding `Sᵢ`, which are the result of type inference.
+Instead, all `Xᵢ` are considered *unfixed*, and a *lower-bound inference* is made *from* each parameter type `Uᵢ` of `D` *to* the corresponding parameter type `Tᵢ` of `M`. In addition, if `D` and `M` are returns-by-value and `U₀` is the return type of `D`, then an *upper-bound inference* is made *from* `U₀` *to* `T₀`. If `D` and `M` are returns-by-ref and `U₀` is the return type of `D`, then an *exact inference* is made *from* `U₀` *to* `T₀`. If for any of the `Xᵢ` no bounds were found, type inference fails. Otherwise, all `Xᵢ` are *fixed* to corresponding `Sᵢ`, which are the result of type inference.
 
 #### 12.6.3.17 Finding the best common type of a set of expressions
 
@@ -2209,7 +2255,7 @@ The run-time processing of a function pointer invocation of the form `F(A)`, whe
 
 #### 12.8.10.2 Method invocations
 
-For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list*.
+For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list* and, if the method invocation has one, its target type.
 
 The binding-time processing of a method invocation of the form `M(A)`, where `M` is a method group (possibly including a *type_argument_list*), and `A` is an optional *argument_list*, consists of the following steps:
 
@@ -2218,7 +2264,7 @@ The binding-time processing of a method invocation of the form `M(A)`, where `M`
     - `M` has no type argument list, and
     - `F` is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)).
   - If `F` is generic and `M` has no type argument list, `F` is a candidate when:
-    - Type inference ([§12.6.3](expressions.md#1263-type-inference)) succeeds, inferring a list of type arguments for the call, and
+    - Type inference (§type-inference-for-method-invocations-new-clause) succeeds, inferring a list of type arguments for the call, and
     - Once the inferred type arguments are substituted for the corresponding method type parameters, all constructed types in the parameter list of `F` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `F` is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member))
   - If `F` is generic and `M` includes a type argument list, `F` is a candidate when:
     - `F` has the same number of method type parameters as were supplied in the type argument list, and
