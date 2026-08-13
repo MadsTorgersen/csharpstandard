@@ -1216,11 +1216,10 @@ As with all other implicit and explicit conversions, the cast operator can be us
 >
 > *end example*
 
-A method group conversion can refer to a generic method, either by explicitly specifying type arguments within `E`, or via type inference ([§12.6.3](expressions.md#1263-type-inference)). If type inference is used, the parameter types of the delegate are used as argument types in the inference process. The return type of the delegate is not used for inference. Whether the type arguments are specified or inferred, they are part of the method group conversion process; these are the type arguments used to invoke the target method when the resulting delegate is invoked.
+A method group conversion can refer to a generic method, either by explicitly specifying type arguments within `E`, or via type inference ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)). If type inference is used, the parameter types of the delegate are used as argument types in the inference process. If the delegate and method are returns-by-value or returns-by-ref, the return type of the delegate is used as the target type for inference from the return type of the method. Whether the type arguments are specified or inferred, they are part of the method group conversion process; these are the type arguments used to invoke the target method when the resulting delegate is invoked.
 
 > *Example*:
 >
-> <!-- Example: {template:"standalone-console-without-using", name:"MethodGroupConversions2", replaceEllipsis:true, customEllipsisReplacements:["return default;","return default;"], expectedErrors:["CS0411"]} -->
 > ```csharp
 > delegate int D(string s, int i);
 > delegate int E();
@@ -1235,7 +1234,7 @@ A method group conversion can refer to a generic method, either by explicitly sp
 >         D d1 = F<int>;        // Ok, type argument given explicitly
 >         D d2 = F;             // Ok, int inferred as type argument
 >         E e1 = G<int>;        // Ok, type argument given explicitly
->         E e2 = G;             // Error, cannot infer from return type
+>         E e2 = G;             // Ok, int inferred from return type
 >     }
 > }
 > ```

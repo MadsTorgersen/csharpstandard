@@ -771,10 +771,12 @@ For a generic construct, type inference uses the following information from its 
 
 - A list of type parameters `X₁...Xᵥ` and any constraints they have.
 - A list of parameter types `T₁...Tₓ`.
+- Optionally, a result type `T₀`, including whether the result is by-value or has a *ref_kind*.
 
 In addition, it uses the following information from the context where the generic construct is used:
 
 - A list of argument expressions `E₁...Eₓ`, each corresponding to one of the parameter types `T₁...Tₓ`.
+- Optionally, a target type `Tₑ` corresponding to the result type `T₀`, including whether the target is by-value or has a *ref_kind*.
 
 Type inference for a particular context specifies these inputs as applicable. Type inference, if it succeeds, produces a list of type arguments `A₁...Aᵥ`, each corresponding to one of the type parameters `X₁...Xᵥ`.
 
@@ -787,6 +789,11 @@ Type inference takes place in phases. Each phase will try to infer type argument
 #### 12.6.3.2 The first phase
 
 For each argument expression `Eᵢ`, an input type inference ([§12.6.3.7](expressions.md#12637-input-type-inferences)) is made from `Eᵢ` to the corresponding parameter type `Tᵢ`.
+
+Additionally, if both a result type `T₀` and a target type `Tₑ` are supplied:
+
+- If both are by-value, an *upper-bound inference* ([§12.6.3.12](expressions.md#126312-upper-bound-inferences)) is made from `Tₑ` to `T₀`.
+- If both are by-ref, an *exact inference* ([§12.6.3.10](expressions.md#126310-exact-inferences)) is made from `Tₑ` to `T₀`.
 
 #### 12.6.3.3 The second phase
 
@@ -1035,17 +1042,37 @@ Type inference occurs as part of the binding-time processing of a method invocat
 
 If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails.
 
-Type parameters and parameter types are determined from the generic method declaration.
+Type parameters, parameter types, and the result type are determined from the generic method declaration:
+
+`T₀ M<X₁...Xᵥ>(T₁ p₁ ... Tₓ pₓ)`
+
+However, if the return type is `void`, then no result type `T₀` is used for the inference. Otherwise, whether the result is by-value or its *ref_kind* is determined from the method declaration.
 
 Argument expressions are determined from the invocation expression:
 
 `M(E₁ ...Eₓ)`
 
+Additionally, `Tₑ` is the target type of the method invocation, if it has one, including whether the target is by-value or its *ref_kind*.
+
+**TBD**: The precise meaning and source of the target type and *ref_kind* of a method invocation depends on the target-typing model.
+
+> *Example*:
+>
+> ```csharp
+> static IEnumerable<T> Create<T>() => default!;
+>
+> IEnumerable<string> values = Create();
+> ```
+>
+> The target type of the invocation is `IEnumerable<string>`, and its result type is `IEnumerable<T>`. Upper-bound inference from the target type to the result type produces an upper bound of `string` for `T`, so `T` is inferred to be `string`.
+>
+> *end example*
+
 #### 12.6.3.16 Type inference for conversion of method groups
 
 Similar to calls of generic methods, type inference shall also be applied when a method group `M` containing a generic method is converted to a given delegate type `D` ([§10.8](conversions.md#108-method-group-conversions)). Given a method
 
-`Tₑ M<X₁...Xᵥ>(T₁ x₁ ... Tₑ xₑ)`
+`T₀ M<X₁...Xᵥ>(T₁ x₁ ... Tₓ xₓ)`
 
 and the method group `M` being assigned to the delegate type `D` the task of type inference is to find type arguments `S₁...Sᵥ` so that the expression:
 
@@ -1055,7 +1082,7 @@ becomes compatible ([§21.2](delegates.md#212-delegate-declarations)) with `D`.
 
 Unlike the type inference algorithm for generic method calls, in this case, there are only argument *types*, no argument *expressions*. In particular, there are no anonymous functions and hence no need for multiple phases of inference.
 
-Instead, all `Xᵢ` are considered *unfixed*, and a *lower-bound inference* is made *from* each argument type `Uₑ` of `D` *to* the corresponding parameter type `Tₑ` of `M`. If for any of the `Xᵢ` no bounds were found, type inference fails. Otherwise, all `Xᵢ` are *fixed* to corresponding `Sᵢ`, which are the result of type inference.
+Instead, all `Xᵢ` are considered *unfixed*, and a *lower-bound inference* is made *from* each parameter type `Uᵢ` of `D` *to* the corresponding parameter type `Tᵢ` of `M`. In addition, if `D` and `M` are returns-by-value and `U₀` is the return type of `D`, then an *upper-bound inference* is made *from* `U₀` *to* `T₀`. If `D` and `M` are returns-by-ref and `U₀` is the return type of `D`, then an *exact inference* is made *from* `U₀` *to* `T₀`. If for any of the `Xᵢ` no bounds were found, type inference fails. Otherwise, all `Xᵢ` are *fixed* to corresponding `Sᵢ`, which are the result of type inference.
 
 #### 12.6.3.17 Finding the best common type of a set of expressions
 
@@ -2228,7 +2255,7 @@ The run-time processing of a function pointer invocation of the form `F(A)`, whe
 
 #### 12.8.10.2 Method invocations
 
-For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list*.
+For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list* and, if the method invocation has one, its target type.
 
 The binding-time processing of a method invocation of the form `M(A)`, where `M` is a method group (possibly including a *type_argument_list*), and `A` is an optional *argument_list*, consists of the following steps:
 
