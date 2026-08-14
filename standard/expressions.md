@@ -434,7 +434,7 @@ Except for finalizers and static constructors (which cannot be invoked explicitl
 
 The argument list ([§12.6.2](expressions.md#1262-argument-lists)) of a function member invocation provides actual values or variable references for the parameters of the function member.
 
-Invocations of generic methods and instance constructors selected from a type group may employ type inference to determine type arguments. This process is described in [§12.6.3](expressions.md#1263-type-inference).
+Invocations of generic methods and instance constructors may employ type inference to determine type arguments. This process is described in [§12.6.3](expressions.md#1263-type-inference).
 
 Invocations of methods, indexers, operators, and instance constructors employ overload resolution to determine which of a candidate set of function members to invoke. This process is described in [§12.6.4](expressions.md#1264-overload-resolution).
 
