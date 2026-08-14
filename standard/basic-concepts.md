@@ -1164,9 +1164,9 @@ A *namespace_or_type_name* is permitted to reference a static class ([§15.2.2.4
 >
 > *end example*
 
-### §type-groups-new-clause Type groups
+### §type-group-names-new-clause Type group names
 
-Some contexts require a set of types having the same name without specifying a number of type arguments. Such a set is a ***type group*** and is resolved from a *type_group_name*.
+Some contexts require a set of types having the same name without specifying a number of type arguments. A *type_group_name* identifies such a set for use in a type group (§type-groups-new-clause).
 
 ```ANTLR
 type_group_name
@@ -1176,7 +1176,7 @@ type_group_name
     ;
 ```
 
-A type group is analogous to a method group ([§12.2.1](expressions.md#1221-general)) in that a single lookup finds a set of same-name declarations and a later binding operation selects from that set. Unlike a method group, a type group contains only unbound types ([§8.4.4](types.md#844-bound-and-unbound-types)) and contains at most one type with any given number of type parameters.
+Type-group-name lookup is analogous to member lookup that produces a method group ([§12.5](expressions.md#125-member-lookup)): a single lookup finds a set of same-name declarations from which a later binding operation selects. Unlike method-group lookup, type-group-name lookup finds only unbound types ([§8.4.4](types.md#844-bound-and-unbound-types)) and produces at most one type with any given number of type parameters.
 
 A *type_group_name* is resolved in a similar manner to a *namespace_or_type_name*, except that type declarations are considered without regard to their number of type parameters and the result is a set of unbound types rather than a single namespace or type.
 
@@ -1210,7 +1210,7 @@ After the result is found:
 
 - If it is empty or contains an entity that is not an unbound type, the *type_group_name* is undefined and a compile-time error occurs.
 - Otherwise, if it contains two distinct types having the same number of type parameters, the *type_group_name* is ambiguous and a compile-time error occurs.
-- Otherwise, the *type_group_name* resolves to the type group containing the unbound types in the result.
+- Otherwise, the *type_group_name* resolves to the set of unbound types in the result.
 
 > *Example*: Given the declarations:
 >
@@ -1223,7 +1223,7 @@ After the result is found:
 > }
 > ```
 >
-> lookup of the type group name `Widgets.Queue` produces a type group containing all three unbound types. None hides another because they have different numbers of type parameters.
+> the type group name `Widgets.Queue` resolves to a set containing all three unbound types. None hides another because they have different numbers of type parameters.
 >
 > *end example*
 

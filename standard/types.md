@@ -609,11 +609,11 @@ Boxing is described in more detail in [§10.2.9](conversions.md#1029-boxing-conv
 
 ### 8.4.1 General
 
-A generic type declaration, by itself, denotes an ***unbound generic type*** that is used as a “blueprint” to form many different types, by way of applying ***type argument***s. The type arguments are written within angle brackets (`<` and `>`) immediately following the name of the generic type. A type that includes at least one type argument is called a ***constructed type***. A constructed type can be used in most places in the language in which a type name can appear. An unbound generic type can only be used within a *typeof_expression* ([§12.8.18](expressions.md#12818-the-typeof-operator)).
+A generic type declaration, by itself, denotes an ***unbound generic type*** that is used as a “blueprint” to form many different types, by way of applying ***type argument***s. The type arguments are written within angle brackets (`<` and `>`) immediately following the name of the generic type. A type that includes at least one type argument is called a ***constructed type***. A constructed type can be used in most places in the language in which a type name can appear. An unbound generic type can be a member of a type group (§type-groups-new-clause) or be used within a *typeof_expression* ([§12.8.18](expressions.md#12818-the-typeof-operator)).
 
 Constructed types can also be used in expressions as simple names ([§12.8.4](expressions.md#1284-simple-names)) or when accessing a member ([§12.8.7](expressions.md#1287-member-access)).
 
-When a *namespace_or_type_name* is evaluated, only generic types with the correct number of type parameters are considered. Thus, it is possible to use the same identifier to identify different types, as long as the types have different numbers of type parameters. This is useful when mixing generic and non-generic classes in the same program. By contrast, lookup of a type group (§type-groups-new-clause) considers all same-name type declarations in a single lookup, regardless of their number of type parameters.
+When a *namespace_or_type_name* is evaluated, only generic types with the correct number of type parameters are considered. Thus, it is possible to use the same identifier to identify different types, as long as the types have different numbers of type parameters. This is useful when mixing generic and non-generic classes in the same program. By contrast, lookup of a type group name (§type-group-names-new-clause) considers all same-name type declarations in a single lookup, regardless of their number of type parameters.
 
 > *Example*:
 >
@@ -693,6 +693,24 @@ Two closed constructed types are identity convertible ([§10.2.2](conversions.md
 The term ***unbound type*** refers to a non-generic type or an unbound generic type. The term ***bound type*** refers to a non-generic type or a constructed type.
 
 An unbound type refers to the entity declared by a type declaration. An unbound generic type is not itself a type, and cannot be used as the type of a variable, argument or return value, or as a base type. An unbound generic type can be a member of a type group (§type-groups-new-clause) and can be referenced in a `typeof` expression ([§12.8.18](expressions.md#12818-the-typeof-operator)).
+
+### §type-groups-new-clause Type groups
+
+Some contexts permit either a type or a set of unbound types having the same name. A ***type group*** is the set of candidates made available by either form.
+
+```ANTLR
+type_group
+    : type
+    | type_group_name
+    ;
+```
+
+When recognizing a *type_group*, if both *type* and *type_group_name* are applicable, *type_group_name* is chosen.
+
+A *type_group* is resolved as follows:
+
+- A *type_group* that is a *type* resolves to a singleton set containing that type.
+- A *type_group* that is a *type_group_name* resolves to the set of unbound types found by type-group-name lookup (§type-group-names-new-clause).
 
 ### 8.4.5 Satisfying constraints
 
