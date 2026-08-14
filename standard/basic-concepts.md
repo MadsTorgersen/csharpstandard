@@ -1164,6 +1164,83 @@ A *namespace_or_type_name* is permitted to reference a static class ([§15.2.2.4
 >
 > *end example*
 
+### §type-groups-new-clause Type groups
+
+Some contexts require a set of types having the same name without specifying a number of type arguments. Such a set is a ***type group*** and is resolved from a *type_group_name*.
+
+```ANTLR
+type_group_name
+    : identifier
+    | namespace_or_type_name '.' identifier
+    | identifier '::' identifier
+    ;
+```
+
+A type group is analogous to a method group ([§12.2.1](expressions.md#1221-general)) in that a single lookup finds a set of same-name declarations and a later binding operation selects from that set. Unlike a method group, a type group contains only unbound types ([§8.4.4](types.md#844-bound-and-unbound-types)) and contains at most one type with any given number of type parameters.
+
+A *type_group_name* is resolved in a similar manner to a *namespace_or_type_name*, except that type declarations are considered without regard to their number of type parameters and the result is a set of unbound types rather than a single namespace or type.
+
+If the *type_group_name* is an *identifier* `I`, the following steps are processed:
+
+- If the *type_group_name* appears within a generic method declaration ([§15.6](classes.md#156-methods)) but outside the *attributes* of its *method_header*, and that declaration includes a type parameter ([§15.2.3](classes.md#1523-type-parameters)) named `I`, then the result consists of that type parameter.
+- Otherwise, if the *type_group_name* appears within a type declaration, then for each instance type `T` ([§15.3.2](classes.md#1532-the-instance-type)), starting with the instance type of that declaration and continuing with the instance type of each enclosing class, struct, or interface declaration (if any):
+  - If the declaration of `T` includes a type parameter named `I`, then the result consists of that type parameter.
+  - Otherwise, if the *type_group_name* appears within the body of the type declaration and `T` or any of its base types contains one or more accessible nested types named `I`, then the result consists of those unbound types, after applying the following rule for each number of type parameters: if more than one such type has that number of type parameters, the type declared in the more derived type is selected. It is a compile-time error if no type is more derived than all the others having that number of type parameters.
+    > *Note*: Non-type members are ignored when determining the result. Types having different numbers of type parameters do not hide one another. *end note*
+  - Otherwise, processing continues with the next enclosing instance type.
+- Otherwise, or if no result was found in an enclosing instance type, for each namespace `N`, starting with the namespace in which the *type_group_name* occurs, continuing with each enclosing namespace (if any), and ending with the global namespace, the following steps are processed until a non-empty result is found:
+  - The result consists of the following entities, if any:
+    - Any namespaces and accessible type declarations directly contained in `N` and named `I`.
+    - Any namespace associated with `I` by an *extern_alias_directive* in a namespace declaration for `N` within which the *type_group_name* occurs.
+    - Any namespace or type associated with `I` by a *using_alias_directive* in a namespace declaration for `N` within which the *type_group_name* occurs.
+    - Any namespace or type associated with `I` by a *global_using_alias_directive* in any namespace declaration for `N` in the program.
+  - If that result is empty, the result consists of the following types, if any:
+    - Any accessible type declarations named `I` in a namespace imported by a *using_namespace_directive* in a namespace declaration for `N` within which the *type_group_name* occurs.
+    - Any accessible type declarations named `I` imported by *global_using_namespace_directive*s and *global_using_static_directive*s in any namespace declaration for `N` in the program.
+
+If the *type_group_name* has the form `N.I`, where `N` is a *namespace_or_type_name* and `I` is an *identifier*, `N` is first resolved as a *namespace_or_type_name*, and:
+
+- If `N` refers to a namespace, the result consists of all namespaces and accessible type declarations directly contained in `N` and named `I`.
+- Otherwise, if `N` refers to a possibly constructed class, struct, or interface type and `N` or any of its base types contains one or more accessible nested types named `I`, the result consists of those unbound types, after applying the following rule for each number of type parameters: if more than one such type has that number of type parameters, the type declared in the more derived type is selected. It is a compile-time error if no type is more derived than all the others having that number of type parameters.
+- Otherwise, the result is empty.
+
+If the *type_group_name* has the form `A::I`, where `A` and `I` are identifiers, `A` is resolved as the left-hand identifier of a *qualified_alias_member* ([§14.9.1](namespaces.md#1491-general)). If `A` refers to a namespace, the result consists of all namespaces and accessible type declarations directly contained in that namespace and named `I`; otherwise, the result is empty.
+
+After the result is found:
+
+- If it is empty or contains an entity that is not an unbound type, the *type_group_name* is undefined and a compile-time error occurs.
+- Otherwise, if it contains two distinct types having the same number of type parameters, the *type_group_name* is ambiguous and a compile-time error occurs.
+- Otherwise, the *type_group_name* resolves to the type group containing the unbound types in the result.
+
+> *Example*: Given the declarations:
+>
+> ```csharp
+> namespace Widgets
+> {
+>     class Queue {}
+>     class Queue<T> {}
+>     class Queue<T1, T2> {}
+> }
+> ```
+>
+> lookup of the type group name `Widgets.Queue` produces a type group containing all three unbound types. None hides another because they have different numbers of type parameters.
+>
+> *end example*
+
+> *Example*: Given:
+>
+> ```csharp
+> using N1;
+> using N2;
+>
+> namespace N1 { class C<T> {} }
+> namespace N2 { class C<T> {} }
+> ```
+>
+> lookup of the type group name `C` is ambiguous because the first non-empty result contains two distinct types having one type parameter. A type `C` in an enclosing namespace would not be considered because lookup stops when the imported types produce a non-empty result.
+>
+> *end example*
+
 ### 7.8.2 Unqualified names
 
 Every namespace declaration and type declaration has an ***unqualified name*** determined as follows:
