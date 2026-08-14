@@ -441,7 +441,7 @@ Invocations of methods, indexers, operators, and instance constructors employ ov
 Once a particular function member has been identified at binding-time, possibly through overload resolution, the actual run-time process of invoking the function member is described in [§12.6.6](expressions.md#1266-function-member-invocation).
 
 <!-- markdownlint-disable MD027 -->
-> *Note*: The following table summarizes the processing that takes place in constructs involving the six categories of function members that can be explicitly invoked. In the table, `e`, `x`, `y`, and `value` indicate expressions classified as variables or values, `T` indicates a *type* or *type_group_name* in an object creation and an expression classified as a type otherwise, `F` is the simple name of a method, and `P` is the simple name of a property.
+> *Note*: The following table summarizes the processing that takes place in constructs involving the six categories of function members that can be explicitly invoked. In the table, `e`, `x`, `y`, and `value` indicate expressions classified as variables or values, `T` indicates a *type_group* in an object creation and an expression classified as a type otherwise, `F` is the simple name of a method, and `P` is the simple name of a property.
 >
 > <!-- Custom Word conversion: function_members -->
 > <table>
@@ -1071,7 +1071,7 @@ Additionally, `Tₑ` is the target type of the method invocation, if it has one,
 
 #### §type-inference-for-object-creation-expressions-new-clause Type inference for object creation expressions
 
-Type inference occurs as part of the binding-time processing of an *object_creation_expression* ([§12.8.17.2](expressions.md#128172-object-creation-expressions)) whose *type_group_name* resolves to a type group (§type-groups-new-clause). It takes place before overload resolution of the constructor invocation.
+Type inference occurs as part of the binding-time processing of an *object_creation_expression* ([§12.8.17.2](expressions.md#128172-object-creation-expressions)) whose *type_group* (§type-groups-new-clause) contains an unbound generic type. It takes place before overload resolution of the constructor invocation.
 
 Type inference is applied separately to each constructor of each generic type in the type group. If type inference for a particular constructor fails, that constructor does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find an applicable constructor.
 
@@ -3007,10 +3007,8 @@ An *object_creation_expression* is used to create a new instance of a *class_typ
 
 ```ANTLR
 object_creation_expression
-    : 'new' type '(' argument_list? ')' object_or_collection_initializer?
-    | 'new' type object_or_collection_initializer
-    | 'new' type_group_name '(' argument_list? ')' object_or_collection_initializer?
-    | 'new' type_group_name object_or_collection_initializer
+    : 'new' type_group '(' argument_list? ')' object_or_collection_initializer?
+    | 'new' type_group object_or_collection_initializer
     | target_typed_new
     ;
 
@@ -3024,46 +3022,38 @@ object_or_collection_initializer
     ;
 ```
 
-Unless the *object_creation_expression* is dynamically bound, when it can be recognized using either a *type_group_name* or a *type*, the form is selected as follows:
+The *type_group* (§type-groups-new-clause) of an *object_creation_expression* is resolved before the candidate constructors are determined.
 
-- If the *type_group_name* resolves to a type group (§type-groups-new-clause), the form using the *type_group_name* is selected. If lookup of the *type_group_name* is ambiguous, a compile-time error occurs.
-- Otherwise, the form using the *type* is selected and the *type* shall resolve. For this purpose, an undefined *type_group_name* does not cause a compile-time error if the *type* resolves.
+If a type can be inferred from usage, the *type_group* can be omitted, as allowed by *target_typed_new*. It is a compile-time error to omit it if the type cannot be inferred. A *target_typed_new* expression has no type. However, there is an implicit object-creation conversion ([§10.2.19](conversions.md#10219-implicit-object-creation-conversions)) from a *target_typed_new* expression to every type. It is a compile-time error if a *target_typed_new* is used as an operand of a unary or binary operator, or if it is used where it is not subject to an object-creation conversion.
 
-For a dynamically bound *object_creation_expression*, the form using a *type* shall be selected and the *type* shall resolve.
-
-The *type* of an *object_creation_expression* shall be a *class_type*, a *value_type*, or a *type_parameter*. A type group is processed as described below. The specified, implied, or inferred type cannot be a *tuple_type* or an abstract or static *class_type*.
-
-If a type can be inferred from usage, the *type* or *type_group_name* can be omitted, as allowed by *target_typed_new*. It is a compile-time error to omit them if the type cannot be inferred. A *target_typed_new* expression has no type. However, there is an implicit object-creation conversion ([§10.2.19](conversions.md#10219-implicit-object-creation-conversions)) from a *target_typed_new* expression to every type. It is a compile-time error if a *target_typed_new* is used as an operand of a unary or binary operator, or if it is used where it is not subject to an object-creation conversion.
-
-The optional *argument_list* ([§12.6.2](expressions.md#1262-argument-lists)) is permitted only if the expression contains a *type_group_name*, or its specified or implied type is a *class_type* or *struct_type*.
+The optional *argument_list* ([§12.6.2](expressions.md#1262-argument-lists)) is permitted only if the specified *type_group* contains a *class_type* or *struct_type*, or the implied type is a *class_type* or *struct_type*.
 
 An object creation expression can omit the constructor argument list and enclosing parentheses provided it includes an object initializer or collection initializer. Omitting the constructor argument list and enclosing parentheses is equivalent to specifying an empty argument list.
 
 Processing of an object creation expression that includes an object initializer or collection initializer consists of first processing the instance constructor and then processing the member or element initializations specified by the object initializer ([§12.8.17.3](expressions.md#128173-object-initializers)) or collection initializer ([§12.8.17.3.1](expressions.md#1281731-collection-initializers)).
 
-If any of the arguments in the optional *argument_list* has the compile-time type `dynamic` then the *object_creation_expression* is dynamically bound ([§12.3.3](expressions.md#1233-dynamic-binding)) and the following rules are applied at run-time using the run-time type of those arguments of the *argument_list* that have the compile-time type `dynamic`. However, the object creation undergoes a limited compile-time check as described in [§12.6.5](expressions.md#1265-compile-time-checking-of-dynamic-member-invocation).
+If any of the arguments in the optional *argument_list* has the compile-time type `dynamic` then the *object_creation_expression* is dynamically bound ([§12.3.3](expressions.md#1233-dynamic-binding)) and the following rules are applied at run-time using the run-time type of those arguments of the *argument_list* that have the compile-time type `dynamic`. However, the object creation undergoes a limited compile-time check as described in [§12.6.5](expressions.md#1265-compile-time-checking-of-dynamic-member-invocation). The *type_group* shall resolve to a singleton set containing a bound *class_type* or *struct_type*.
 
-The binding-time processing of an *object_creation_expression* of the form `new D(A)`, where `D` is a specified *type*, *type_group_name*, or implied type and `A` is an optional *argument_list*, consists of the following steps:
+The binding-time processing of an *object_creation_expression* of the form `new D(A)`, where `D` is a specified *type_group* or implied type and `A` is an optional *argument_list*, consists of the following steps. Let `G` be the set to which a specified *type_group* resolves, or a singleton set containing the implied type:
 
-- If `D` denotes a *type_parameter* `T` and `A` is not present:
+- If `G` contains only a *type_parameter* `T` and `A` is not present:
   - If no value type constraint or constructor constraint ([§15.2.5](classes.md#1525-type-parameter-constraints)) has been specified for `T`, a binding-time error occurs.
   - The result of the *object_creation_expression* is a value of the run-time type that the type parameter has been bound to, namely the result of invoking the default constructor of that type. The run-time type may be a reference type or a value type.
 - Otherwise, the set of candidate constructors is determined as follows:
-  - If `D` denotes a *struct_type* or a non-abstract, non-static *class_type* `T`, each accessible instance constructor declared in `T` which is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)) is a candidate.
-  - If `D` denotes a type group, then for each unbound type in the type group:
-    - If the unbound type is a non-generic *struct_type* or non-abstract, non-static *class_type* `T`, each accessible instance constructor declared in `T` which is applicable with respect to `A` is a candidate.
-    - If the unbound type is a generic *struct_type* or non-abstract, non-static *class_type* `T₀`, each accessible instance constructor `C` declared in `T₀` is a candidate when:
+  - For each type in `G`:
+    - If the type is a non-generic or bound *struct_type* or non-abstract, non-static *class_type* `T`, each accessible instance constructor declared in `T` which is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)) is a candidate.
+    - If the type is an unbound generic *struct_type* or non-abstract, non-static *class_type* `T₀`, each accessible instance constructor `C` declared in `T₀` is a candidate when:
       - Type inference (§type-inference-for-object-creation-expressions-new-clause) succeeds for `C`, inferring type arguments for `T₀`.
       - Once the inferred type arguments are substituted for the corresponding type parameters of `T₀`, the resulting constructed type and all constructed types in the parameter list of `C` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `C` is applicable with respect to `A`.
   - For each considered *struct_type* with no declared parameterless instance constructor, its default constructor is considered to have an empty parameter list and is a candidate when `A` is not present. For a generic *struct_type*, type inference shall succeed and its inferred constructed type shall satisfy its constraints.
-  - The candidates from all unbound types in a type group form a single candidate set.
+  - The candidates from all types in `G` form a single candidate set.
   - If the resulting set of candidate constructors is empty, a binding-time error occurs.
   - Otherwise, the best constructor is identified using the overload resolution rules of [§12.6.4](expressions.md#1264-overload-resolution). When performing overload resolution, the parameters of a constructor of a generic type are considered after substituting the inferred type arguments for the corresponding type parameters of its containing type.
     - For purposes of applying [§12.6.4.3](expressions.md#12643-better-function-member) to this candidate set, references to a generic or non-generic method include a constructor of a generic or non-generic type, respectively. The type parameters and inferred type arguments of such a constructor are those of its containing type.
     - If a single best constructor cannot be identified, a binding-time error occurs.
   - The result of the *object_creation_expression* is a value of type `Tᵣ`, namely the type containing the selected constructor with any inferred type arguments substituted for its type parameters. If the selected constructor is the default constructor of a *struct_type* with no declared parameterless instance constructor, the result is the default value of `Tᵣ` ([§8.3.3](types.md#833-default-constructors)); otherwise, the value is produced by invoking the selected instance constructor.
 
-If the *object_creation_expression* is dynamically bound, its compile-time type is the type denoted by `D`.
+If the *object_creation_expression* is dynamically bound, its compile-time type is the single type in `G`.
 
 The run-time processing of an *object_creation_expression* of the form `new D(A)`, where the resulting type `Tᵣ` is *class_type* or a *struct_type* and `A` is an optional *argument_list*, consists of the following steps:
 
