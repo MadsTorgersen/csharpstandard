@@ -441,7 +441,7 @@ Invocations of methods, indexers, operators, and instance constructors employ ov
 Once a particular function member has been identified at binding-time, possibly through overload resolution, the actual run-time process of invoking the function member is described in [§12.6.6](expressions.md#1266-function-member-invocation).
 
 <!-- markdownlint-disable MD027 -->
-> *Note*: The following table summarizes the processing that takes place in constructs involving the six categories of function members that can be explicitly invoked. In the table, `e`, `x`, `y`, and `value` indicate expressions classified as variables or values, `T` indicates a *type_designator* in an object creation and an expression classified as a type otherwise, `F` is the simple name of a method, and `P` is the simple name of a property.
+> *Note*: The following table summarizes the processing that takes place in constructs involving the six categories of function members that can be explicitly invoked. In the table, `e`, `x`, `y`, and `value` indicate expressions classified as variables or values, `T` indicates a *type* or *type_group_name* in an object creation and an expression classified as a type otherwise, `F` is the simple name of a method, and `P` is the simple name of a property.
 >
 > <!-- Custom Word conversion: function_members -->
 > <table>
@@ -1071,7 +1071,7 @@ Additionally, `Tₑ` is the target type of the method invocation, if it has one,
 
 #### §type-inference-for-object-creation-expressions-new-clause Type inference for object creation expressions
 
-Type inference occurs as part of the binding-time processing of an *object_creation_expression* ([§12.8.17.2](expressions.md#128172-object-creation-expressions)) whose *type_designator* denotes a type group (§type-groups-new-clause). It takes place before overload resolution of the constructor invocation.
+Type inference occurs as part of the binding-time processing of an *object_creation_expression* ([§12.8.17.2](expressions.md#128172-object-creation-expressions)) whose *type_group_name* resolves to a type group (§type-groups-new-clause). It takes place before overload resolution of the constructor invocation.
 
 Type inference is applied separately to each constructor of each generic type in the type group. If type inference for a particular constructor fails, that constructor does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find an applicable constructor.
 
@@ -3007,14 +3007,11 @@ An *object_creation_expression* is used to create a new instance of a *class_typ
 
 ```ANTLR
 object_creation_expression
-    : 'new' type_designator '(' argument_list? ')' object_or_collection_initializer?
-    | 'new' type_designator object_or_collection_initializer
+    : 'new' type '(' argument_list? ')' object_or_collection_initializer?
+    | 'new' type object_or_collection_initializer
+    | 'new' type_group_name '(' argument_list? ')' object_or_collection_initializer?
+    | 'new' type_group_name object_or_collection_initializer
     | target_typed_new
-    ;
-
-type_designator
-    : type
-    | type_group_name
     ;
 
 target_typed_new
@@ -3027,18 +3024,18 @@ object_or_collection_initializer
     ;
 ```
 
-Unless the *object_creation_expression* is dynamically bound, a *type_designator* is resolved as follows:
+Unless the *object_creation_expression* is dynamically bound, when it can be recognized using either a *type_group_name* or a *type*, the form is selected as follows:
 
-- If the *type_designator* can be recognized as a *type_group_name* and resolves to a type group (§type-groups-new-clause), then it denotes that type group. If lookup of the *type_group_name* is ambiguous, a compile-time error occurs.
-- Otherwise, the *type_designator* shall resolve as a *type* and denotes that type. For this purpose, an undefined *type_group_name* does not cause a compile-time error if the *type_designator* resolves as a *type*.
+- If the *type_group_name* resolves to a type group (§type-groups-new-clause), the form using the *type_group_name* is selected. If lookup of the *type_group_name* is ambiguous, a compile-time error occurs.
+- Otherwise, the form using the *type* is selected and the *type* shall resolve. For this purpose, an undefined *type_group_name* does not cause a compile-time error if the *type* resolves.
 
-For a dynamically bound *object_creation_expression*, the *type_designator* shall resolve as a *type* and denotes that type.
+For a dynamically bound *object_creation_expression*, the form using a *type* shall be selected and the *type* shall resolve.
 
-The type denoted by a *type_designator* shall be a *class_type*, a *value_type*, or a *type_parameter*. A type group denoted by a *type_designator* is processed as described below. The specified, implied, or inferred type cannot be a *tuple_type* or an abstract or static *class_type*.
+The *type* of an *object_creation_expression* shall be a *class_type*, a *value_type*, or a *type_parameter*. A type group is processed as described below. The specified, implied, or inferred type cannot be a *tuple_type* or an abstract or static *class_type*.
 
-If a type can be inferred from usage, the *type_designator* can be omitted, as allowed by *target_typed_new*. It is a compile-time error to omit the *type_designator* if the type cannot be inferred. A *target_typed_new* expression has no type. However, there is an implicit object-creation conversion ([§10.2.19](conversions.md#10219-implicit-object-creation-conversions)) from a *target_typed_new* expression to every type. It is a compile-time error if a *target_typed_new* is used as an operand of a unary or binary operator, or if it is used where it is not subject to an object-creation conversion.
+If a type can be inferred from usage, the *type* or *type_group_name* can be omitted, as allowed by *target_typed_new*. It is a compile-time error to omit them if the type cannot be inferred. A *target_typed_new* expression has no type. However, there is an implicit object-creation conversion ([§10.2.19](conversions.md#10219-implicit-object-creation-conversions)) from a *target_typed_new* expression to every type. It is a compile-time error if a *target_typed_new* is used as an operand of a unary or binary operator, or if it is used where it is not subject to an object-creation conversion.
 
-The optional *argument_list* ([§12.6.2](expressions.md#1262-argument-lists)) is permitted only if the *type_designator* denotes a type group, *class_type*, or *struct_type*.
+The optional *argument_list* ([§12.6.2](expressions.md#1262-argument-lists)) is permitted only if the expression contains a *type_group_name*, or its specified or implied type is a *class_type* or *struct_type*.
 
 An object creation expression can omit the constructor argument list and enclosing parentheses provided it includes an object initializer or collection initializer. Omitting the constructor argument list and enclosing parentheses is equivalent to specifying an empty argument list.
 
@@ -3046,7 +3043,7 @@ Processing of an object creation expression that includes an object initializer 
 
 If any of the arguments in the optional *argument_list* has the compile-time type `dynamic` then the *object_creation_expression* is dynamically bound ([§12.3.3](expressions.md#1233-dynamic-binding)) and the following rules are applied at run-time using the run-time type of those arguments of the *argument_list* that have the compile-time type `dynamic`. However, the object creation undergoes a limited compile-time check as described in [§12.6.5](expressions.md#1265-compile-time-checking-of-dynamic-member-invocation).
 
-The binding-time processing of an *object_creation_expression* of the form `new D(A)`, where `D` is a specified *type_designator* or an implied type and `A` is an optional *argument_list*, consists of the following steps:
+The binding-time processing of an *object_creation_expression* of the form `new D(A)`, where `D` is a specified *type*, *type_group_name*, or implied type and `A` is an optional *argument_list*, consists of the following steps:
 
 - If `D` denotes a *type_parameter* `T` and `A` is not present:
   - If no value type constraint or constructor constraint ([§15.2.5](classes.md#1525-type-parameter-constraints)) has been specified for `T`, a binding-time error occurs.
