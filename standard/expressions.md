@@ -534,7 +534,7 @@ Once a particular function member has been identified at binding-time, possibly 
 >   <tr>
 >     <td>Instance constructor invocation</td>
 >     <td><code>new T(x, y)</code></td>
->     <td>Type inference is applied to constructors of generic types, and overload resolution is applied to select the best instance constructor denoted by <code>T</code>. The instance constructor is invoked with the argument list <code>(x, y)</code>.</td>
+>     <td>Overload resolution is applied to select the best instance constructor denoted by <code>T</code>.</td>
 >   </tr>
 > </table>
 >
