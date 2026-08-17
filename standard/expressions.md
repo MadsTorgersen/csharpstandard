@@ -1088,6 +1088,21 @@ Additionally, `Tₑ` is the target type of the object creation expression, if it
 > *Example*:
 >
 > ```csharp
+> class Pair<TFirst, TSecond>
+> {
+>     public Pair(TFirst first, TSecond second) {}
+> }
+>
+> var pair = new Pair("answer", 42);
+> ```
+>
+> Inference from the constructor arguments infers `string` for `TFirst` and `int` for `TSecond`.
+>
+> *end example*
+
+> *Example*:
+>
+> ```csharp
 > class Box<T>
 > {
 >     public Box() {}
@@ -1097,21 +1112,6 @@ Additionally, `Tₑ` is the target type of the object creation expression, if it
 > ```
 >
 > The target type of the object creation expression is `Box<string>`, and its result type is `Box<T>`. Upper-bound inference from the target type to the result type produces an exact bound of `string` for `T`, so `T` is inferred to be `string`.
->
-> *end example*
-
-> *Example*:
->
-> ```csharp
-> class Pair<TFirst, TSecond>
-> {
->     public Pair(TFirst first, TSecond second) {}
-> }
->
-> Pair<string, int> pair = new Pair("answer", 42);
-> ```
->
-> Inference from the constructor arguments and target type infers `string` for `TFirst` and `int` for `TSecond`.
 >
 > *end example*
 
