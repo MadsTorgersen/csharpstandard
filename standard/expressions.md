@@ -3026,8 +3026,6 @@ The *type_group* (§type-groups-new-clause) of an *object_creation_expression* i
 
 If a type can be inferred from usage, the *type_group* can be omitted, as allowed by *target_typed_new*. It is a compile-time error to omit it if the type cannot be inferred. A *target_typed_new* expression has no type. However, there is an implicit object-creation conversion ([§10.2.19](conversions.md#10219-implicit-object-creation-conversions)) from a *target_typed_new* expression to every type. It is a compile-time error if a *target_typed_new* is used as an operand of a unary or binary operator, or if it is used where it is not subject to an object-creation conversion.
 
-The optional *argument_list* ([§12.6.2](expressions.md#1262-argument-lists)) is permitted only if the specified *type_group* contains a *class_type* or *struct_type*, or the implied type is a *class_type* or *struct_type*.
-
 An object creation expression can omit the constructor argument list and enclosing parentheses provided it includes an object initializer or collection initializer. Omitting the constructor argument list and enclosing parentheses is equivalent to specifying an empty argument list.
 
 Processing of an object creation expression that includes an object initializer or collection initializer consists of first processing the instance constructor and then processing the member or element initializations specified by the object initializer ([§12.8.17.3](expressions.md#128173-object-initializers)) or collection initializer ([§12.8.17.3.1](expressions.md#1281731-collection-initializers)).
