@@ -3038,12 +3038,13 @@ The binding-time processing of an *object_creation_expression* of the form `new 
   - If no value type constraint or constructor constraint ([§15.2.5](classes.md#1525-type-parameter-constraints)) has been specified for `T`, a binding-time error occurs.
   - The result of the *object_creation_expression* is a value of the run-time type that the type parameter has been bound to, namely the result of invoking the default constructor of that type. The run-time type may be a reference type or a value type.
 - Otherwise, the set of candidate constructors is determined as follows:
-  - For each type in `G`:
-    - If the type is a non-generic or bound *struct_type* or non-abstract, non-static *class_type* `T`, each accessible instance constructor declared in `T` which is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)) is a candidate.
-    - If the type is an unbound generic *struct_type* or non-abstract, non-static *class_type* `T₀`, each accessible instance constructor `C` declared in `T₀` is a candidate when:
-      - Type inference (§type-inference-for-object-creation-expressions-new-clause) succeeds for `C`, inferring type arguments for `T₀`.
-      - Once the inferred type arguments are substituted for the corresponding type parameters of `T₀`, the resulting constructed type and all constructed types in the parameter list of `C` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `C` is applicable with respect to `A`.
-  - For each considered *struct_type* with no declared parameterless instance constructor, its default constructor is considered to have an empty parameter list and is a candidate when `A` is not present. For a generic *struct_type*, type inference shall succeed and its inferred constructed type shall satisfy its constraints.
+  - For each bound and unbound type `T` in `G`:
+    - If `T` is neither a *struct_type* nor a non-abstract, non-static *class_type*, it does not contribute candidate constructors.
+    - Otherwise, for each accessible instance constructor `C` that is either declared in `T` or is the default constructor for `T` if `T` is a *struct_type* that does not declare a parameterless constructor:
+      - If `T` is a bound (i.e., non-generic or constructed) type ([§8.4.4](types.md#844-bound-and-unbound-types)), `C` is a candidate if it is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)).
+      - Otherwise, `T` is an unbound generic type. `C` is a candidate when:
+        - Type inference (§type-inference-for-object-creation-expressions-new-clause) succeeds for `C`, inferring type arguments for `T`.
+        - Once the inferred type arguments are substituted for the corresponding type parameters of `T`, the resulting constructed type and all constructed types in the parameter list of `C` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `C` is applicable with respect to `A`.
   - The candidates from all types in `G` form a single candidate set.
   - If the resulting set of candidate constructors is empty, a binding-time error occurs.
   - Otherwise, the best constructor is identified using the overload resolution rules of [§12.6.4](expressions.md#1264-overload-resolution). When performing overload resolution, the parameters of a constructor of a generic type are considered after substituting the inferred type arguments for the corresponding type parameters of its containing type.
