@@ -60,6 +60,8 @@ Target-typed binding is defined for the following expression forms:
 - Invocation expressions using generic type inference (§target-typed-binding-of-invocation-expressions-new-clause).
 - Object creation expressions using type inference for an unbound generic type (§target-typed-binding-of-object-creation-expressions-new-clause).
 
+For all other expression forms, target-typed binding fails.
+
 ## 12.3 Static and Dynamic Binding
 
 ### 12.3.1 General
