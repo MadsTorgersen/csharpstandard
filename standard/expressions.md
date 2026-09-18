@@ -47,6 +47,21 @@ Most of the constructs that involve an expression ultimately require the express
 - The value of an indexer access expression is obtained by invoking the get accessor of the indexer. If the indexer has no get accessor, a compile-time error occurs. Otherwise, a function member invocation ([§12.6.6](expressions.md#1266-function-member-invocation)) is performed with the argument list associated with the indexer access expression, and the result of the invocation becomes the value of the indexer access expression.
 - The value of a tuple literal with a type is obtained by evaluating each of its element expressions in order from left to right ([§12.8.6](expressions.md#1286-tuple-literals)). It is an error to obtain the value of a tuple literal that does not have a type.
 
+### §target-typing-new-clause Target typing
+
+In determining whether an implicit target-typing conversion (§implicit-target-typing-conversions-new-clause) exists from an expression `E` to a type `T`, `E` may be bound with target type `T`. When so bound, `E` is ***target-typed*** with `T`.
+
+> *Note*: In candidate-based binding, the same expression may be target-typed with different types in different binding attempts. *end note*
+
+The target type shall already have been determined before target-typed binding is initiated. Target-typed binding does not participate in determining that target type.
+
+Target-typed binding is defined for the following expression forms:
+
+- Invocation expressions using generic type inference (§target-typed-binding-of-invocation-expressions-new-clause).
+- Object creation expressions using type inference for an unbound generic type (§target-typed-binding-of-object-creation-expressions-new-clause).
+
+For all other expression forms, target-typed binding fails.
+
 ## 12.3 Static and Dynamic Binding
 
 ### 12.3.1 General
@@ -1053,21 +1068,7 @@ Argument expressions are determined from the invocation expression:
 
 `M(E₁ ...Eₓ)`
 
-Additionally, `Tₑ` is the target type of the method invocation, if it has one, including whether the target is by-value or its *ref_kind*.
-
-**TBD**: The precise meaning and source of the target type and *ref_kind* of a method invocation depends on the target-typing model.
-
-> *Example*:
->
-> ```csharp
-> static IEnumerable<T> Create<T>() => default!;
->
-> IEnumerable<string> values = Create();
-> ```
->
-> The target type of the invocation is `IEnumerable<string>`, and its result type is `IEnumerable<T>`. Upper-bound inference from the target type to the result type produces an upper bound of `string` for `T`, so `T` is inferred to be `string`.
->
-> *end example*
+When type inference is performed as part of target-typed binding (§target-typed-binding-of-invocation-expressions-new-clause), `Tₑ` is the target type supplied by that binding. If `T₀` is by-value, `Tₑ` is by-value. Otherwise, `Tₑ` has the same *ref_kind* as `T₀`. When type inference is not performed as part of target-typed binding, no target type is supplied.
 
 #### §type-inference-for-object-creation-expressions-new-clause Type inference for object creation expressions
 
@@ -1083,7 +1084,7 @@ The argument expressions `E₁...Eₓ` are determined from the object creation e
 
 `new G(E₁ ...Eₓ)`
 
-Additionally, `Tₑ` is the target type of the object creation expression, if it has one. The target is by-value.
+When type inference is performed as part of target-typed binding (§target-typed-binding-of-object-creation-expressions-new-clause), `Tₑ` is the target type supplied by that binding and is by-value. Otherwise, no target type is supplied.
 
 > *Example*:
 >
@@ -1097,21 +1098,6 @@ Additionally, `Tₑ` is the target type of the object creation expression, if it
 > ```
 >
 > Inference from the constructor arguments infers `string` for `TFirst` and `int` for `TSecond`.
->
-> *end example*
-
-> *Example*:
->
-> ```csharp
-> class Box<T>
-> {
->     public Box() {}
-> }
->
-> Box<string> box = new Box();
-> ```
->
-> The target type of the object creation expression is `Box<string>`, and its result type is `Box<T>`. Upper-bound inference from the target type to the result type produces an exact bound of `string` for `T`, so `T` is inferred to be `string`.
 >
 > *end example*
 
@@ -2302,7 +2288,7 @@ The run-time processing of a function pointer invocation of the form `F(A)`, whe
 
 #### 12.8.10.2 Method invocations
 
-For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list* and, if the method invocation has one, its target type.
+For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list*. A target type is considered only during target-typed binding (§target-typed-binding-of-invocation-expressions-new-clause).
 
 The binding-time processing of a method invocation of the form `M(A)`, where `M` is a method group (possibly including a *type_argument_list*), and `A` is an optional *argument_list*, consists of the following steps:
 
@@ -2324,6 +2310,31 @@ The binding-time processing of a method invocation of the form `M(A)`, where `M`
 Once a method has been selected and validated at binding-time by the above steps, the actual run-time invocation is processed according to the rules of function member invocation described in [§12.6.6](expressions.md#1266-function-member-invocation).
 
 > *Note*: The intuitive effect of the resolution rules described above is as follows: To locate the particular method invoked by a method invocation, start with the type indicated by the method invocation and proceed up the inheritance chain until at least one applicable, accessible, non-override method declaration is found. Then perform type inference and overload resolution on the set of applicable, accessible, non-override methods declared in that type and invoke the method thus selected. If no method was found, try instead to process the invocation as an extension-method invocation. *end note*
+
+##### §target-typed-binding-of-invocation-expressions-new-clause Target-typed binding of invocation expressions
+
+Target-typed binding is defined for a method invocation with no explicit type argument list for which binding-time processing applies type inference to at least one generic method, including any generic extension method considered during processing as an extension method invocation ([§12.8.10.3](expressions.md#128103-extension-method-invocations)).
+
+To target-type such a method invocation `E` with a type `T`, its binding-time processing is performed from the beginning with `T` supplied as the target type input to type inference (§type-inference-for-method-invocations-new-clause), by-value or with the *ref_kind* corresponding to each candidate method’s result. All other binding-time processing is unchanged. In particular, explicit type arguments are not inferred again, and non-generic candidate methods participate as specified in [§12.8.10.2](expressions.md#128102-method-invocations).
+
+Target-typed binding succeeds if the processing selects a single valid invocation and one of the following applies:
+
+- The invocation returns by-value with result type `S`, and an implicit conversion exists from type `S` to type `T`. The result of target-typed binding is the result of the invocation converted to `T` by that conversion.
+- The invocation returns by-ref with result type `S`, its *ref_kind* is the same as that of the target, and an identity conversion exists between `S` and `T`. The result of target-typed binding is the variable resulting from the invocation, with associated type `T`.
+
+Otherwise, target-typed binding fails.
+
+> *Example*:
+>
+> ```csharp
+> static IEnumerable<T> Create<T>() => default!;
+>
+> IEnumerable<string> values = Create();
+> ```
+>
+> Binding `Create()` without a target type fails because there are no bounds for `T`. Therefore no invocation result type is available for an implicit conversion to `IEnumerable<string>`. In determining whether a target-typing conversion exists, the invocation is bound again with target type `IEnumerable<string>`. Upper-bound inference from the target type to the result type `IEnumerable<T>` produces an upper bound of `string` for `T`, so `T` is inferred to be `string` and target-typed binding succeeds.
+>
+> *end example*
 
 #### 12.8.10.3 Extension method invocations
 
@@ -3064,6 +3075,29 @@ The run-time processing of an *object_creation_expression* of the form `new D(A)
 - If `Tᵣ` is a *struct_type* and the selected constructor is not the default constructor of a *struct_type* with no declared parameterless instance constructor:
   - An instance of type `Tᵣ` is created by allocating a temporary local variable. Since an instance constructor of a *struct_type* is required to definitely assign a value to each field of the instance being created, no initialization of the temporary variable is necessary.
   - The selected instance constructor is invoked according to the rules of function member invocation ([§12.6.6](expressions.md#1266-function-member-invocation)). A reference to the newly allocated instance is automatically passed to the instance constructor and the instance can be accessed from within that constructor as this.
+
+##### §target-typed-binding-of-object-creation-expressions-new-clause Target-typed binding of object creation expressions
+
+Target-typed binding is defined for an *object_creation_expression* with a specified *type_group* (§type-groups-new-clause) that contains at least one unbound generic type.
+
+To target-type such an *object_creation_expression* `E` with a type `T`, its binding-time processing is performed from the beginning with `T` supplied as the target type input to type inference (§type-inference-for-object-creation-expressions-new-clause). All other binding-time processing, including resolution of the *type_group* and participation of constructors of bound types, is unchanged.
+
+Target-typed binding succeeds if the processing selects a single valid object creation whose result is a value of type `S`, and an implicit conversion exists from type `S` to type `T`. Its result is the result of the object creation converted to `T` by that conversion. Otherwise, target-typed binding fails.
+
+> *Example*:
+>
+> ```csharp
+> class Box<T>
+> {
+>     public Box() {}
+> }
+>
+> Box<string> box = new Box();
+> ```
+>
+> Binding `new Box()` without a target type fails because there are no bounds for `T`. Therefore no object creation result type is available for an implicit conversion to `Box<string>`. In determining whether a target-typing conversion exists, the object creation is bound again with target type `Box<string>`. Upper-bound inference from the target type to the result type `Box<T>` produces an exact bound of `string` for `T`, so `T` is inferred to be `string` and target-typed binding succeeds.
+>
+> *end example*
 
 #### 12.8.17.3 Object initializers
 
@@ -3920,7 +3954,7 @@ stackalloc_element_initializer
     ;
 ```
 
-The *unmanaged_type* ([§8.8](types.md#88-unmanaged-types)) indicates the type of the items that will be stored in the newly allocated location, and the *expression* indicates the number of these items. Taken together, these specify the required allocation size. The type of *expression* shall be implicitly convertible to the type `int`.
+The *unmanaged_type* ([§8.8](types.md#88-unmanaged-types)) indicates the type of the items that will be stored in the newly allocated location, and the *expression* indicates the number of these items. Taken together, these specify the required allocation size. The *expression* shall be implicitly convertible to the type `int`.
 
 As the size of a stack allocation cannot be negative, it is a compile-time error to specify the number of items as a *constant_expression* that evaluates to a negative value.
 
