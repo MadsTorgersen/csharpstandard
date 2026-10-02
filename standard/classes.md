@@ -2388,7 +2388,7 @@ Input, output, and reference parameters are ***by-reference parameter***s. A by-
 
 > *Note*: The referent of a by-reference parameter can be changed using the ref assignment (`= ref`) operator.
 
-When a parameter is a by-reference parameter, the corresponding argument in a method invocation shall consist of the corresponding keyword, `in`, `ref`, or `out`, followed by a *variable_reference* ([§9.5](variables.md#95-variable-references)) of the same type as the parameter. However, when the parameter is a `ref readonly` or `in` parameter, the argument may be an *expression* for which an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from that argument expression to the type of the corresponding parameter.
+When a parameter is a by-reference parameter, the corresponding argument shall satisfy the parameter-passing-mode and reference-target requirements of [§12.6.4.2](expressions.md#12642-applicable-function-member). An argument corresponding to a `ref readonly` or `in` parameter may omit the modifier and use an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) to the parameter type, as specified there.
 
 By-reference parameters are not allowed on functions declared as an iterator ([§15.15](classes.md#1515-synchronous-and-asynchronous-iterators)) or async function ([§15.14](classes.md#1514-async-functions)).
 
@@ -3424,9 +3424,11 @@ When the effective return type of a method is `void` and the method has a block 
 
 When the effective return type of a method is `void` and the method has an expression body, the expression `E` shall be a *statement_expression*, and the body is exactly equivalent to a block body of the form `{ E; }`.
 
+For a returns-by-value method with a non-`void` effective return type, an expression body `=> E;` is equivalent to the block body `{ return E; }`. For a returns-by-ref method, an expression body `=> ref E;` is equivalent to the block body `{ return ref E; }`.
+
 For a returns-by-value method ([§15.6.1](classes.md#1561-general)), each return statement in that method’s body shall specify an expression that is implicitly convertible to the effective return type.
 
-For a returns-by-ref method ([§15.6.1](classes.md#1561-general)), each return statement in that method’s body shall specify an expression whose type is that of the effective return type, and has a *ref-safe-context* of *caller-context* ([§9.7.2](variables.md#972-ref-safe-contexts)).
+For a returns-by-ref method ([§15.6.1](classes.md#1561-general)), each return statement in that method’s body shall be a valid return-by-ref statement as specified in [§13.10.5](statements.md#13105-the-return-statement).
 
 For returns-by-value and returns-by-ref methods the endpoint of the method body shall not be reachable. In other words, control is not permitted to flow off the end of the method body.
 
@@ -3655,6 +3657,8 @@ A get accessor for a non-ref-valued property corresponds to a parameterless meth
 The body of a get accessor for a non-ref-valued property shall conform to the rules for value-returning methods described in [§15.6.11](classes.md#15611-method-body). In particular, all `return` statements in the body of a get accessor shall specify an expression that is implicitly convertible to the property type. Furthermore, the endpoint of a get accessor shall not be reachable.
 
 A get accessor for a ref-valued property corresponds to a parameterless method with a return value of a *variable_reference* to a variable of the property type. When such a property is referenced in an expression its get accessor is invoked to compute the *variable_reference* value of the property. That *variable reference*, like any other, is then used to read or, for non-readonly *variable_reference*s, write the referenced variable as required by the context.
+
+The body of a get accessor for a ref-valued property shall conform to the rules for returns-by-ref methods in [§15.6.11](classes.md#15611-method-body), using the property's type and *ref_kind*.
 
 > *Example*: The following example illustrates a ref-valued property as the target of an assignment:
 >

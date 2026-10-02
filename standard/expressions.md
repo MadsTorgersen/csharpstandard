@@ -25,6 +25,7 @@ The result of an expression is classified as one of the following:
 - A property access. Every property access has an associated type, namely the type of the property. Furthermore, a property access may have an associated instance expression. When an accessor of an instance property access is invoked, the result of evaluating the instance expression becomes the instance represented by `this` ([§12.8.14](expressions.md#12814-this-access)).
 - An indexer access. Every indexer access has an associated type, namely the element type of the indexer. Furthermore, an indexer access has an associated instance expression and an associated argument list. When an accessor of an indexer access is invoked, the result of evaluating the instance expression becomes the instance represented by `this` ([§12.8.14](expressions.md#12814-this-access)), and the result of evaluating the argument list becomes the parameter list of the invocation.
 - Nothing. This occurs when the expression is an invocation of a method with a return type of `void`. An expression classified as nothing is only valid in the context of a *statement_expression* ([§13.7](statements.md#137-expression-statements)) or as the body of a *lambda_expression* ([§12.22](expressions.md#1222-anonymous-function-expressions)).
+- A ***target-dependent expression***. An expression with this classification has no type and is permitted only as the source of an implicit target-typing conversion (§implicit-target-typing-conversions-new-clause) or when binding to a reference target (§binding-to-reference-target-new-clause). In any other context, a binding-time error occurs.
 
 For expressions which occur as subexpressions of larger expressions, with the noted restrictions, the result can also be classified as one of the following:
 
@@ -46,6 +47,26 @@ Most of the constructs that involve an expression ultimately require the express
 - The value of a property access expression is obtained by invoking the get accessor of the property. If the property has no get accessor, a compile-time error occurs. Otherwise, a function member invocation ([§12.6.6](expressions.md#1266-function-member-invocation)) is performed, and the result of the invocation becomes the value of the property access expression.
 - The value of an indexer access expression is obtained by invoking the get accessor of the indexer. If the indexer has no get accessor, a compile-time error occurs. Otherwise, a function member invocation ([§12.6.6](expressions.md#1266-function-member-invocation)) is performed with the argument list associated with the indexer access expression, and the result of the invocation becomes the value of the indexer access expression.
 - The value of a tuple literal with a type is obtained by evaluating each of its element expressions in order from left to right ([§12.8.6](expressions.md#1286-tuple-literals)). It is an error to obtain the value of a tuple literal that does not have a type.
+
+### §target-typing-new-clause Target-aware binding
+
+In ***target-aware binding***, a target-dependent expression is bound with a previously determined target. The result has the classification and associated type, if any, established by the expression-specific binding-time processing.
+
+Target-aware binding is defined for:
+
+- A statically bound method invocation with a value or reference target (§target-typed-binding-of-invocation-expressions-new-clause).
+- A statically bound object creation expression with a specified type group and a value target (§target-typed-binding-of-object-creation-expressions-new-clause).
+
+A parenthesized expression ([§12.8.5](expressions.md#1285-parenthesized-expressions)) or null-forgiving expression ([§12.8.9](expressions.md#1289-null-forgiving-expressions)) containing a target-dependent expression is also target-dependent and forwards target-aware binding to the contained expression.
+
+#### §binding-to-reference-target-new-clause Binding to a reference target
+
+An expression `E` binds to a reference target with type `T` and *ref_kind* `R` if one of the following holds:
+
+- `E` is a variable with associated type `S`, an identity conversion exists between `S` and `T`, and the variable is writeable if `R` is `ref`.
+- `E` is target-dependent, target-aware binding of `E` with the reference target produces a variable with associated type `S`, an identity conversion exists between `S` and `T`, and the variable is writeable if `R` is `ref`.
+
+The result is the variable established by the applicable rule.
 
 ## 12.3 Static and Dynamic Binding
 
@@ -1039,7 +1060,7 @@ An *explicit return type inference* is made *from* an expression `E` *to* a type
 
 #### §type-inference-for-method-invocations-new-clause Type inference for method invocations
 
-Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find any applicable methods.
+Type inference occurs as part of the binding-time processing of a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) and takes place before the overload resolution step of the invocation. When a particular method group is specified in a method invocation, and no type arguments are specified as part of the method invocation, type inference is applied to each generic method in the method group. If type inference succeeds, then the inferred type arguments are used to determine the types of arguments for subsequent overload resolution. If overload resolution chooses a generic method as the one to invoke, then the inferred type arguments are used as the type arguments for the invocation. If type inference for a particular method fails, that method does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error, but can cause the binding of the invocation to fail because no applicable methods remain.
 
 If each supplied argument does not correspond to exactly one parameter in the method ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails.
 
@@ -1053,27 +1074,18 @@ Argument expressions are determined from the invocation expression:
 
 `M(E₁ ...Eₓ)`
 
-Additionally, `Tₑ` is the target type of the method invocation, if it has one, including whether the target is by-value or its *ref_kind*.
+When type inference is performed as part of target-aware binding (§target-typed-binding-of-invocation-expressions-new-clause), `Tₑ` is the target type supplied by that binding:
 
-**TBD**: The precise meaning and source of the target type and *ref_kind* of a method invocation depends on the target-typing model.
+- For a value target, `Tₑ` is by-value. If the method returns by-ref, `T₀` is treated as by-value for this inference, with the same type, because the use obtains the value of the returned variable.
+- For a reference target, `Tₑ` has the *ref_kind* specified by the target, and `T₀` retains the by-value or by-reference form determined from the method declaration.
 
-> *Example*:
->
-> ```csharp
-> static IEnumerable<T> Create<T>() => default!;
->
-> IEnumerable<string> values = Create();
-> ```
->
-> The target type of the invocation is `IEnumerable<string>`, and its result type is `IEnumerable<T>`. Upper-bound inference from the target type to the result type produces an upper bound of `string` for `T`, so `T` is inferred to be `string`.
->
-> *end example*
+If the method returns `void`, no result type `T₀` is supplied and no inference is made from the target. When type inference is not performed as part of target-aware binding, no target type is supplied.
 
 #### §type-inference-for-object-creation-expressions-new-clause Type inference for object creation expressions
 
 Type inference occurs as part of the binding-time processing of an *object_creation_expression* ([§12.8.17.2](expressions.md#128172-object-creation-expressions)) whose *type_group* (§type-groups-new-clause) contains an unbound generic type. It takes place before overload resolution of the constructor invocation.
 
-Type inference is applied separately to each constructor of each generic type in the type group. If type inference for a particular constructor fails, that constructor does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error. However, it often leads to a binding-time error when overload resolution then fails to find an applicable constructor.
+Type inference is applied separately to each constructor of each generic type in the type group. If type inference for a particular constructor fails, that constructor does not participate in overload resolution. The failure of type inference, in and of itself, does not cause a binding-time error, but can cause the binding of the object creation to fail because no applicable constructors remain.
 
 If each supplied argument does not correspond to exactly one parameter in the constructor ([§12.6.2.2](expressions.md#12622-corresponding-parameters)), or there is a non-optional parameter with no corresponding argument, then inference immediately fails.
 
@@ -1083,7 +1095,7 @@ The argument expressions `E₁...Eₓ` are determined from the object creation e
 
 `new G(E₁ ...Eₓ)`
 
-Additionally, `Tₑ` is the target type of the object creation expression, if it has one. The target is by-value.
+When type inference is performed as part of target-aware binding (§target-typed-binding-of-object-creation-expressions-new-clause), `Tₑ` is the target type supplied by that binding and is by-value. Otherwise, no target type is supplied.
 
 > *Example*:
 >
@@ -1097,21 +1109,6 @@ Additionally, `Tₑ` is the target type of the object creation expression, if it
 > ```
 >
 > Inference from the constructor arguments infers `string` for `TFirst` and `int` for `TSecond`.
->
-> *end example*
-
-> *Example*:
->
-> ```csharp
-> class Box<T>
-> {
->     public Box() {}
-> }
->
-> Box<string> box = new Box();
-> ```
->
-> The target type of the object creation expression is `Box<string>`, and its result type is `Box<T>`. Upper-bound inference from the target type to the result type produces an exact bound of `string` for `T`, so `T` is inferred to be `string`.
 >
 > *end example*
 
@@ -1159,12 +1156,16 @@ Each of these contexts defines the set of candidate function members and the lis
 
 Once the candidate function members and the argument list have been identified, the selection of the best function member is the same in all cases:
 
-- First, the set of candidate function members is reduced to those function members that are applicable with respect to the given argument list ([§12.6.4.2](expressions.md#12642-applicable-function-member)). If this reduced set is empty, a compile-time error occurs.
-- Then, the best function member from the set of applicable candidate function members is located. If the set contains only one function member, then that function member is the best function member. Otherwise, the best function member is the one function member that is better than all other function members with respect to the given argument list, provided that each function member is compared to all other function members using the rules in [§12.6.4.3](expressions.md#12643-better-function-member). If there is not exactly one function member that is better than all other function members, then the function member invocation is ambiguous and a binding-time error occurs.
+- First, the set of candidate function members is reduced to those function members that are applicable with respect to the given argument list ([§12.6.4.2](expressions.md#12642-applicable-function-member)). If this reduced set is empty, overload resolution fails.
+- Then, the best function member from the set of applicable candidate function members is located. If the set contains only one function member, then that function member is the best function member. Otherwise, the best function member is the one function member that is better than all other function members with respect to the given argument list, provided that each function member is compared to all other function members using the rules in [§12.6.4.3](expressions.md#12643-better-function-member). If there is not exactly one function member that is better than all other function members, the selection is ambiguous and overload resolution fails.
+
+The context in which overload resolution is used specifies how its outcome is used. Unless that context specifies another consequence of failure, failure causes a binding-time error.
 
 The following subclauses define the exact meanings of the terms *applicable function member* and *better function member*.
 
 #### 12.6.4.2 Applicable function member
+
+Once argument-to-parameter correspondence and any required type inference have succeeded, an argument with an `in`, `ref`, or `out` modifier that is not a declaration expression is bound to a reference target (§binding-to-reference-target-new-clause) of the corresponding parameter type, after substituting any supplied or inferred type arguments. The target's *ref_kind* is `ref readonly` for an `in` argument and `ref` otherwise. If this binding fails, the function member is not applicable. The requirements below concerning the argument's type and classification refer to the result of that binding. Declaration expressions retain the rules of [§12.20](expressions.md#1220-declaration-expressions).
 
 A function member is said to be an ***applicable function member*** with respect to an argument list `A` when all of the following are true:
 
@@ -1172,9 +1173,10 @@ A function member is said to be an ***applicable function member*** with respect
 - For each argument in `A`, the parameter-passing mode of the argument is identical to the parameter-passing mode of the corresponding parameter, and
   - for a value parameter or a parameter array, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter, or
   - for a reference parameter whose type is a struct type, an implicit interpolated string handler conversion exists from the argument to the type of the corresponding parameter, or
-  - for a reference or output parameter, there is an identity conversion between the type of the argument expression (if any) and the type of the corresponding parameter, or
-  - for an input parameter when the corresponding argument has the `in` modifier, there is an identity conversion between the type of the argument expression (if any) and the type of the corresponding parameter, or
-  - for an input parameter when the corresponding argument omits the `in` modifier, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter.
+  - for a reference or output parameter, or for an input parameter when the corresponding argument has the `in` modifier, either:
+    - the argument is an output declaration expression with type `U` determined as specified in [§12.20](expressions.md#1220-declaration-expressions), and an identity conversion exists between `U` and the type of the corresponding parameter; or
+    - binding to the reference target described above succeeded; or
+  - for an input parameter when the corresponding argument omits the `in` modifier, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter; or
   - for a `ref readonly` parameter when the corresponding argument omits the `ref` modifier, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter.
 
 For a function member that includes a parameter array, if the function member is applicable by the above rules, it is said to be applicable in its ***normal form***. If a function member that includes a parameter array is not applicable in its normal form, the function member might instead be applicable in its ***expanded form***:
@@ -1183,7 +1185,7 @@ For a function member that includes a parameter array, if the function member is
 - Otherwise, the expanded form is applicable if for each argument in `A`, one of the following is true:
   - the parameter-passing mode of the argument is identical to the parameter-passing mode of the corresponding parameter, and:
     - for a fixed value parameter or a value parameter created by the expansion, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter; or
-    - for a by-reference parameter, the type of the argument expression is identical to the type of the corresponding parameter.
+    - for a by-reference parameter, either the argument is an output declaration expression with type `U` determined as specified in [§12.20](expressions.md#1220-declaration-expressions), and an identity conversion exists between `U` and the type of the corresponding parameter, or binding to the reference target described above succeeded.
   - the parameter-passing mode of the argument is value, and the parameter-passing mode of the corresponding parameter is input or `ref readonly`, and an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) exists from the argument expression to the type of the corresponding parameter.
 
 When the implicit conversion from the argument type to the parameter type of an input parameter is a dynamic implicit conversion ([§10.2.10](conversions.md#10210-implicit-dynamic-conversions)), the results are undefined.
@@ -2302,7 +2304,7 @@ The run-time processing of a function pointer invocation of the form `F(A)`, whe
 
 #### 12.8.10.2 Method invocations
 
-For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list* and, if the method invocation has one, its target type.
+For a method invocation, the *primary_expression* of the *invocation_expression* shall be a method group. The method group identifies the one method to invoke or the set of overloaded methods from which to choose a specific method to invoke. In the latter case, determination of the specific method to invoke is based on the context provided by the types of the arguments in the *argument_list*. A target is considered only during target-aware binding (§target-typed-binding-of-invocation-expressions-new-clause).
 
 The binding-time processing of a method invocation of the form `M(A)`, where `M` is a method group (possibly including a *type_argument_list*), and `A` is an optional *argument_list*, consists of the following steps:
 
@@ -2318,12 +2320,96 @@ The binding-time processing of a method invocation of the form `M(A)`, where `M`
     - Once the type arguments are substituted for the corresponding method type parameters, all constructed types in the parameter list of `F` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `F` is applicable with respect to `A` ([§12.6.4.2](expressions.md#12642-applicable-function-member)).
 - The set of candidate methods is reduced to contain only methods from the most derived types: For each method `C.F` in the set, where `C` is the type in which the method `F` is declared, all methods declared in a base type of `C` are removed from the set. Furthermore, if `C` is a class type other than `object`, all methods declared in an interface type are removed from the set.  
   > *Note*: This latter rule only has an effect when the method group was the result of a member lookup on a type parameter having an effective base class other than `object` and a non-empty effective interface set. *end note*
-- If the resulting set of candidate methods is empty, then further processing along the following steps are abandoned, and instead an attempt is made to process the invocation as an extension method invocation ([§12.8.10.3](expressions.md#128103-extension-method-invocations)). If this fails, then no applicable methods exist, and a binding-time error occurs.
-- The best method of the set of candidate methods is identified using the overload resolution rules of [§12.6.4](expressions.md#1264-overload-resolution). If a single best method cannot be identified, the method invocation is ambiguous, and a binding-time error occurs. When performing overload resolution, the parameters of a generic method are considered after substituting the type arguments (supplied or inferred) for the corresponding method type parameters.
+- If the resulting set of candidate methods is empty, then further processing along the following steps are abandoned, and instead an attempt is made to process the invocation as an extension method invocation ([§12.8.10.3](expressions.md#128103-extension-method-invocations)). If extension-method processing fails, the invocation is classified as target-dependent.
+- The best method of the set of candidate methods is identified using the overload resolution rules of [§12.6.4](expressions.md#1264-overload-resolution). If a single best method cannot be identified, the selection is ambiguous and the invocation is classified as target-dependent. When performing overload resolution, the parameters of a generic method are considered after substituting the type arguments (supplied or inferred) for the corresponding method type parameters.
 
 Once a method has been selected and validated at binding-time by the above steps, the actual run-time invocation is processed according to the rules of function member invocation described in [§12.6.6](expressions.md#1266-function-member-invocation).
 
 > *Note*: The intuitive effect of the resolution rules described above is as follows: To locate the particular method invoked by a method invocation, start with the type indicated by the method invocation and proceed up the inheritance chain until at least one applicable, accessible, non-override method declaration is found. Then perform type inference and overload resolution on the set of applicable, accessible, non-override methods declared in that type and invoke the method thus selected. If no method was found, try instead to process the invocation as an extension-method invocation. *end note*
+
+##### §target-typed-binding-of-invocation-expressions-new-clause Target-aware binding of invocation expressions
+
+During target-aware binding of a method invocation, the target `T` is supplied to type inference (§type-inference-for-method-invocations-new-clause). The invocation is otherwise bound as specified in [§12.8.10.2](expressions.md#128102-method-invocations).
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
+> *Example*:
+>
+> ```csharp
+> static IEnumerable<T> Create<T>() => default!;
+>
+> IEnumerable<string> values = Create();
+> ```
+>
+> Binding `Create()` without a target fails because there are no bounds for `T`, so the invocation is target-dependent. During target-aware binding with target `IEnumerable<string>`, upper-bound inference from the target type to the result type `IEnumerable<T>` produces an upper bound of `string` for `T`, so `T` is inferred to be `string`.
+>
+> *end example*
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
+> *Example*:
+>
+> ```csharp
+> static object Create() => "fallback";
+> static T Create<T>() => default!;
+>
+> string value = Create(); // Error
+> ```
+>
+> Binding without a target selects the non-generic method, so the invocation is a value of type `object`, not a target-dependent expression. The absence of an implicit conversion from `object` to `string` does not make target-aware binding applicable.
+>
+> *end example*
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
+> *Example*:
+>
+> ```csharp
+> static T Pick<T>(T x, object y) => x;
+> static T Pick<T>(object x, T y) => y;
+>
+> string value = Pick("", 0);
+> ```
+>
+> Without a target, the candidates infer `string` and `int` respectively, and neither candidate is better for both arguments, so the invocation is target-dependent. During target-aware binding with target `string`, the first candidate infers `string`, while inference for the second fails because its lower bound `int` and upper bound `string` cannot both be satisfied. The first candidate is selected.
+>
+> *end example*
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
+> *Example*:
+>
+> ```csharp
+> static string F(string x, object y) => x;
+> static int F(object x, int y) => y;
+>
+> string value = F("", 0); // Error
+> ```
+>
+> Binding without a target is ambiguous, so the invocation is target-dependent. Target-aware binding with target `string` remains ambiguous because the target does not affect either non-generic candidate's applicability or the better function member rules.
+>
+> *end example*
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
+> *Example*:
+>
+> ```csharp
+> static class Cell<T>
+> {
+>     public static T Value = default!;
+> }
+>
+> static ref T GetCell<T>() => ref Cell<T>.Value;
+>
+> string value = GetCell();
+> ref string variable = ref GetCell();
+> ref readonly string view = ref GetCell();
+> ```
+>
+> Binding `GetCell()` without a target fails because there are no bounds for `T`, so each invocation is target-dependent. Each use supplies a target from which `T` is inferred to be `string`. The first use supplies a value target and reads the returned variable. The other uses supply reference targets and retain the variable reference; the third use does not require that reference to be read-only.
+>
+> *end example*
 
 #### 12.8.10.3 Extension method invocations
 
@@ -2359,8 +2445,8 @@ The search for `C` proceeds as follows:
 - Starting with the closest enclosing namespace declaration, continuing with each enclosing namespace declaration, and ending with the containing compilation unit, successive attempts are made to find a candidate set of extension methods:
   - If the given namespace or compilation unit directly contains non-generic type declarations `Cᵢ` with eligible extension methods `Mₑ`, then the set of those extension methods is the candidate set.
   - If types `Cᵢ` imported by *using_static_directive*s and directly declared in namespaces imported by *using_namespace_directive*s in the given namespace or compilation unit, and, if the containing compilation unit is reached, imported by *global_using_static_directive*s and directly declared in namespaces imported by *global_using_namespace_directive*s in the program, directly contain eligible extension methods `Mₑ`, then the set of those extension methods is the candidate set.
-- If no candidate set is found in any enclosing namespace declaration or compilation unit, a compile-time error occurs.
-- Otherwise, overload resolution is applied to the candidate set as described in [§12.6.4](expressions.md#1264-overload-resolution). If no single best method is found, a compile-time error occurs.
+- If no candidate set is found in any enclosing namespace declaration or compilation unit, extension-method processing fails.
+- Otherwise, overload resolution is applied to the candidate set as described in [§12.6.4](expressions.md#1264-overload-resolution). If no single best method is found, extension-method processing fails.
 - `C` is the type within which the best method is declared as an extension method.
 
 Using `C` as a target, the method call is then processed as a static method invocation ([§12.6.6](expressions.md#1266-function-member-invocation)).
@@ -3046,11 +3132,15 @@ The binding-time processing of an *object_creation_expression* of the form `new 
         - Type inference (§type-inference-for-object-creation-expressions-new-clause) succeeds for `C`, inferring type arguments for `T`.
         - Once the inferred type arguments are substituted for the corresponding type parameters of `T`, the resulting constructed type and all constructed types in the parameter list of `C` satisfy their constraints ([§8.4.5](types.md#845-satisfying-constraints)), and the parameter list of `C` is applicable with respect to `A`.
   - The candidates from all types in `G` form a single candidate set.
-  - If the resulting set of candidate constructors is empty, a binding-time error occurs.
+  - If the resulting set of candidate constructors is empty:
+    - If the object creation has a specified *type_group*, it is classified as target-dependent.
+    - Otherwise, a binding-time error occurs.
   - Otherwise, the best constructor is identified using the overload resolution rules of [§12.6.4](expressions.md#1264-overload-resolution). When performing overload resolution, the parameters of a constructor of a generic type are considered after substituting the inferred type arguments for the corresponding type parameters of its containing type.
     - For purposes of applying [§12.6.4.3](expressions.md#12643-better-function-member) to this candidate set, references to a generic or non-generic method include a constructor of a generic or non-generic type, respectively. The type parameters and inferred type arguments of such a constructor are those of its containing type.
-    - If a single best constructor cannot be identified, a binding-time error occurs.
-  - The result of the *object_creation_expression* is a value of type `Tᵣ`, namely the type containing the selected constructor with any inferred type arguments substituted for its type parameters. If the selected constructor is the default constructor of a *struct_type* with no declared parameterless instance constructor, the result is the default value of `Tᵣ` ([§8.3.3](types.md#833-default-constructors)); otherwise, the value is produced by invoking the selected instance constructor.
+    - If a single best constructor cannot be identified, the selection is ambiguous:
+      - If the object creation has a specified *type_group*, it is classified as target-dependent.
+      - Otherwise, a binding-time error occurs.
+    - Otherwise, the result of the *object_creation_expression* is a value of type `Tᵣ`, namely the type containing the selected constructor with any inferred type arguments substituted for its type parameters. If the selected constructor is the default constructor of a *struct_type* with no declared parameterless instance constructor, the result is the default value of `Tᵣ` ([§8.3.3](types.md#833-default-constructors)); otherwise, the value is produced by invoking the selected instance constructor.
 
 If the *object_creation_expression* is dynamically bound, its compile-time type is the single type in `G`.
 
@@ -3064,6 +3154,25 @@ The run-time processing of an *object_creation_expression* of the form `new D(A)
 - If `Tᵣ` is a *struct_type* and the selected constructor is not the default constructor of a *struct_type* with no declared parameterless instance constructor:
   - An instance of type `Tᵣ` is created by allocating a temporary local variable. Since an instance constructor of a *struct_type* is required to definitely assign a value to each field of the instance being created, no initialization of the temporary variable is necessary.
   - The selected instance constructor is invoked according to the rules of function member invocation ([§12.6.6](expressions.md#1266-function-member-invocation)). A reference to the newly allocated instance is automatically passed to the instance constructor and the instance can be accessed from within that constructor as this.
+
+##### §target-typed-binding-of-object-creation-expressions-new-clause Target-aware binding of object creation expressions
+
+During target-aware binding of an *object_creation_expression*, the value target `T` is supplied to type inference (§type-inference-for-object-creation-expressions-new-clause).
+
+> *Example*:
+>
+> ```csharp
+> class Box<T>
+> {
+>     public Box() {}
+> }
+>
+> Box<string> box = new Box();
+> ```
+>
+> Binding `new Box()` without a target fails because there are no bounds for `T`, so the object creation is target-dependent. During target-aware binding with target `Box<string>`, upper-bound inference from the target type to the result type `Box<T>` produces an exact bound of `string` for `T`, so `T` is inferred to be `string`.
+>
+> *end example*
 
 #### 12.8.17.3 Object initializers
 
@@ -3920,7 +4029,7 @@ stackalloc_element_initializer
     ;
 ```
 
-The *unmanaged_type* ([§8.8](types.md#88-unmanaged-types)) indicates the type of the items that will be stored in the newly allocated location, and the *expression* indicates the number of these items. Taken together, these specify the required allocation size. The type of *expression* shall be implicitly convertible to the type `int`.
+The *unmanaged_type* ([§8.8](types.md#88-unmanaged-types)) indicates the type of the items that will be stored in the newly allocated location, and the *expression* indicates the number of these items. Taken together, these specify the required allocation size. The *expression* shall be implicitly convertible to the type `int`.
 
 As the size of a stack allocation cannot be negative, it is a compile-time error to specify the number of items as a *constant_expression* that evaluates to a negative value.
 
@@ -7826,7 +7935,7 @@ ref_assignment
 
 The operator `= ref`  is called the ***ref assignment operator***. The expression makes the right operand the referent of the reference variable designated by the left operand.
 
-The left operand shall be an expression that binds to a reference variable ([§9.7](variables.md#97-reference-variables-and-returns)), a reference parameter (other than `this`), an output parameter, an input parameter, or a discard. When the left operand is a discard, the right operand is evaluated but no variable reference is stored. Otherwise, the right operand shall be an expression that yields a *variable_reference* ([§9.5](variables.md#95-variable-references)) designating a value of the same type as the left operand.
+The left operand shall be an expression that binds to a reference variable ([§9.7](variables.md#97-reference-variables-and-returns)), a reference parameter (other than `this`), an output parameter, an input parameter, or a discard. When the left operand is a discard, the right operand is evaluated but no variable reference is stored. Otherwise, the right operand shall successfully bind to a reference target (§binding-to-reference-target-new-clause) with the type of the left operand. The target's *ref_kind* is `ref` if the left operand is writeable and `ref readonly` otherwise.
 
 The ref-safe-context of the right operand shall be at least as wide as the ref-safe-context of the left operand, and the left operand shall have the same safe-context as the right operand ([§9.7.2](variables.md#972-ref-safe-contexts)).
 
@@ -7835,8 +7944,6 @@ The ref-safe-context of the right operand shall be at least as wide as the ref-s
 The right operand shall be definitely assigned at the point of the ref assignment.
 
 When the left operand binds to an output parameter, it is an error if that output parameter has not been definitely assigned at the beginning of the ref assignment operator.
-
-If the left operand is a writeable ref (i.e., it designates anything other than a `ref readonly` local or  input parameter), then the right operand shall be a writeable *variable_reference*. If the right operand variable is writeable, the left operand may be a writeable or read-only ref.
 
 The operation makes the left operand an alias of the right operand variable. The alias may be made read-only even if the right operand variable is writeable.
 
