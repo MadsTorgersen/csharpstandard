@@ -319,14 +319,9 @@ This implicit conversion seemingly violates the advice in the beginning of [§10
 
 ### §implicit-target-typing-conversions-new-clause Implicit target-typing conversions
 
-An implicit ***target-typing conversion*** exists from an expression `E` to a type `T` if both of the following hold:
+An implicit ***target-typing conversion*** exists from a target-dependent expression `E` to a type `T` if target-aware binding of `E` with a value target of type `T` produces a value or variable with associated type `S`, and an implicit conversion exists from type `S` to type `T` ([§target-typing-new-clause](expressions.md#target-typing-new-clause-target-aware-binding)).
 
-- `E` has no type, or `E` has a type `S` and no implicit conversion from type `S` to type `T` exists.
-- Target-typed binding of `E` with `T` ([§target-typing-new-clause](expressions.md#target-typing-new-clause-target-typing)) succeeds.
-
-The target-typing conversion produces the result established by the expression-specific target-typed binding, with type `T`.
-
-> *Note*: Other conversions defined from expressions to types are unaffected. *end note*
+The target-typing conversion obtains the value of the result of target-aware binding and converts it to `T`.
 
 ### 10.2.11 Implicit constant expression conversions
 
@@ -1020,6 +1015,7 @@ Specifically, an anonymous function `F` is compatible with a delegate type `D`
 - If `F` has an explicitly typed parameter list, each parameter in `D` has the same modifiers as the corresponding parameter in `F`, ignoring `params` modifiers and default values, and an identity conversion exists between the corresponding parameter in `F`.
 - If `F` has an implicitly typed parameter list, `D` has no reference or output parameters.
 - If `F` has an explicit return type, an identity conversion shall exist from the return type of `F` to the return type of `D`.
+- If the body of `F` is `ref` *expression*, then `D` returns by-ref. When each parameter of `F` is given the type of the corresponding parameter of `D`, *expression* shall successfully bind to a reference target (§binding-to-reference-target-new-clause) with the return type and *ref_kind* of `D`, and satisfy the requirements for a return-by-ref ([§13.10.5](statements.md#13105-the-return-statement)).
 - If the body of `F` is an expression, and *either* `D` has a void return type *or* `F` is async and `D` has a `«TaskType»` return type  ([§15.14.1](classes.md#15141-general)), then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid expression (w.r.t [§12](expressions.md#12-expressions)) that would be permitted as a *statement_expression* ([§13.7](statements.md#137-expression-statements)).
 - If the body of `F` is a block, and *either* `D` has a void return type *or* `F` is async and `D` has a `«TaskType»` return type , then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid block (w.r.t [§13.3](statements.md#133-blocks)) in which no `return` statement specifies an expression.
 - If the body of `F` is an expression, and *either* `F` is non-async and `D` has a non-`void` return type `T`, *or* `F` is async and `D` has a `«TaskType»<T>` return type ([§15.14.1](classes.md#15141-general)), then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid expression (w.r.t [§12](expressions.md#12-expressions)) that is implicitly convertible to `T`.

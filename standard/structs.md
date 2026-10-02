@@ -881,6 +881,32 @@ A *struct_field_declaration* without `ref`, `readonly ref`, or `ref readonly` is
 
 A `ref` or `readonly ref` field is a reference variable and shall only be declared in a `ref` struct.
 
+For a ref field initializer of the form `= ref E`, `E` shall successfully bind to a reference target ([§binding-to-reference-target-new-clause](expressions.md#binding-to-reference-target-new-clause-binding-to-a-reference-target)) with the field's type. The target's *ref_kind* is `ref readonly` if `readonly` follows `ref`, and `ref` otherwise. The resulting variable reference remains subject to the definite-assignment, safe-context, and ref-safe-context requirements for the field initializer. A `readonly` preceding `ref` makes the field itself read-only and does not change the reference target.
+
+> *Example*:
+>
+> ```csharp
+> static class Cell<T>
+> {
+>     public static T Value = default!;
+> }
+>
+> ref struct Holder
+> {
+>     static ref T GetCell<T>() => ref Cell<T>.Value;
+>
+>     public ref string Field = ref GetCell();
+>
+>     public Holder() {}
+> }
+> ```
+>
+> The field initializer supplies a reference target with type `string` and *ref_kind* `ref`, so `T` is inferred to be `string`.
+>
+> *end example*
+<!-- markdownlint-disable MD028 -->
+
+<!-- markdownlint-enable MD028 -->
 Consider the following ref struct declaration:
 
 <!-- Example: {template:"standalone-lib-without-using", name:"refFields1"} -->

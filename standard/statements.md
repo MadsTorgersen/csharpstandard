@@ -473,7 +473,7 @@ ref_local_variable_declarator
 
 An *explicitly_typed_ref_local_variable_declaration* introduces one or more local ref variables with the specified `scoped` modifier and *type*.
 
-The initializing *variable_reference* shall have type *type* and meet the same requirements as for a *ref assignment* ([§12.24.4](expressions.md#12244-ref-assignment)).
+The initializing expression shall successfully bind to a reference target ([§binding-to-reference-target-new-clause](expressions.md#binding-to-reference-target-new-clause-binding-to-a-reference-target)) with type *type* and the declared *ref_kind*. The resulting variable reference shall meet the definite-assignment, safe-context, and ref-safe-context requirements for the right operand of a *ref assignment* ([§12.24.4](expressions.md#12244-ref-assignment)).
 
 If *ref_kind* is `ref readonly`, the *identifier*s being declared are references to variables that are treated as read-only. Otherwise, if *ref_kind* is `ref`, the *identifier*s being declared are references to variables that shall be writable.
 
@@ -1757,13 +1757,11 @@ It is a compile-time error to use a return-by-ref from a method declared as bein
 
 It is a compile-time error to use a return-by-value from a method declared as being returns-no-value or returns-by-ref.
 
-It is a compile-time error to use a return-by-ref if *expression* is not a *variable_reference* or is a reference to a variable whose ref-safe-context is not caller-context ([§9.7.2](variables.md#972-ref-safe-contexts)).
-
 It is a compile-time error to use a return-by-ref from a method declared with the *method_modifier* `async`.
 
 A function member is said to ***compute a value*** if it is a method with a returns-by-value method ([§15.6.11](classes.md#15611-method-body)), a returns-by-value get accessor of a property or indexer, or a user-defined operator. Function members that are returns-no-value do not compute a value and are methods with the effective return type `void`, set accessors of properties and indexers, add and remove accessors of events, instance constructors, static constructors and finalizers. Function members that are returns-by-ref do not compute a value.
 
-For a return-by-value, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) shall exist from *expression* to the effective return type ([§15.6.11](classes.md#15611-method-body)) of the containing function member. For a return-by-ref, an identity conversion ([§10.2.2](conversions.md#1022-identity-conversion)) shall exist between the type of *expression* and the effective return type of the containing function member.
+For a return-by-value, an implicit conversion ([§10.2](conversions.md#102-implicit-conversions)) shall exist from *expression* to the effective return type ([§15.6.11](classes.md#15611-method-body)) of the containing function member. For a return-by-ref, *expression* shall successfully bind to a reference target ([§binding-to-reference-target-new-clause](expressions.md#binding-to-reference-target-new-clause-binding-to-a-reference-target)) with that effective return type and the *ref_kind* of the containing function's return. The resulting variable reference shall have a ref-safe-context of caller-context ([§9.7.2](variables.md#972-ref-safe-contexts)).
 
 `return` statements can also be used in the body of anonymous function expressions ([§12.22](expressions.md#1222-anonymous-function-expressions)), and participate in determining which conversions exist for those functions ([§10.7.1](conversions.md#1071-general)).
 
@@ -1771,7 +1769,7 @@ It is a compile-time error for a `return` statement to appear in a `finally` blo
 
 A `return` statement is executed as follows:
 
-- For a return-by-value, *expression* is evaluated and its value is converted to the effective return type of the containing function by an implicit conversion. The result of the conversion becomes the result value produced by the function. For a return-by-ref, the *expression* is evaluated, and the result shall be classified as a variable. If the enclosing method’s return-by-ref includes `readonly`, the resulting variable is read-only.
+- For a return-by-value, *expression* is evaluated and its value is converted to the effective return type of the containing function by an implicit conversion. The result of the conversion becomes the result value produced by the function. For a return-by-ref, the *expression* is evaluated and the resulting variable reference becomes the result of the function. If the enclosing method’s return-by-ref includes `readonly`, the resulting variable is read-only.
 - If the `return` statement is enclosed by one or more `try` or `catch` blocks with associated `finally` blocks, control is initially transferred to the `finally` block of the innermost `try` statement. When and if control reaches the end point of a `finally` block, control is transferred to the `finally` block of the next enclosing `try` statement. This process is repeated until the `finally` blocks of all enclosing `try` statements have been executed.
 - If the containing function is not an async function, control is returned to the caller of the containing function along with the result value, if any.
 - If the containing function is an async function, control is returned to the current caller, and the result value, if any, is recorded in the return task as described in ([§15.14.3](classes.md#15143-evaluation-of-a-task-returning-async-function)).
