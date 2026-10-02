@@ -385,7 +385,9 @@ A user-defined implicit conversion consists of an optional standard implicit con
 
 ### 10.2.15 Anonymous function conversions and method group conversions
 
-Anonymous functions and method groups do not have types in and of themselves, but they may have a natural type ([§12.22.8](expressions.md#12228-anonymous-function-type)). They may be implicitly converted to delegate types. Additionally, some lambda expressions may be implicitly converted to expression tree types. Anonymous function conversions are described in more detail in [§10.7](conversions.md#107-anonymous-function-conversions) and method group conversions in [§10.8](conversions.md#108-method-group-conversions).
+Expressions classified as anonymous functions or method groups do not have types in and of themselves, but in specified contexts they may have an anonymous function type ([§12.22.8](expressions.md#12228-anonymous-function-type)). Such expressions may be implicitly converted to delegate types. Additionally, some lambda expressions may be implicitly converted to expression tree types.
+
+These conversions apply according to the classification of an expression, rather than to a particular syntactic form. In particular, a method group may result from multiple expression forms through member lookup ([§12.5](expressions.md#125-member-lookup)). Anonymous function conversions are described in [§10.7](conversions.md#107-anonymous-function-conversions), and method group conversions are described in [§10.8](conversions.md#108-method-group-conversions).
 
 ### 10.2.16 Default literal conversions
 
@@ -416,17 +418,16 @@ an implicit ***conditional expression conversion*** exists that permits an impli
 
 ### 10.2.21 Anonymous function type conversion
 
-The following conversions are permitted from an anonymous function type `F`([§12.22.8](expressions.md#12228-anonymous-function-type)):
+The following conversion is permitted from an anonymous function type `F` ([§12.22.8](expressions.md#12228-anonymous-function-type)):
 
 - To an anonymous function type `G` if the parameters and return types of `F` are variance-convertible to the parameters and return type of `G`.
-- To `System.Delegate` or its base classes or interfaces.
-- To `System.Linq.Expressions.Expression` or `System.Linq.Expressions.LambdaExpression`.
 
 There are no conversions to an anonymous function type from a type other than an anonymous function type.
 
-A conversion to `System.Delegate` or its base classes or interfaces realizes the anonymous function or method group as an instance of an appropriate delegate type.
+Let `E` be an expression classified as an anonymous function or method group that has anonymous function type `F`, and let `D` be the corresponding delegate type of `F` ([§12.22.8](expressions.md#12228-anonymous-function-type)). The following additional conversions are permitted:
 
-A conversion to `System.Linq.Expressions.Expression<TDelegate>` or its base classes realizes the anonymous function or method group as an expression tree with an appropriate delegate type.
+- To `System.MulticastDelegate`, `System.Delegate`, any base class of either type (including `object`), or any interface implemented by either type. This conversion realizes `E` as an instance of `D`.
+- If `E` is a *lambda_expression*, to `System.Linq.Expressions.Expression` or `System.Linq.Expressions.LambdaExpression`. This conversion realizes `E` as an instance of `System.Linq.Expressions.Expression<D>`.
 
 > *Example*:
 >
@@ -441,7 +442,7 @@ A conversion to `System.Linq.Expressions.Expression<TDelegate>` or its base clas
 
 Anonymous function type conversions are not implicit or explicit standard conversions and are not considered when determining whether a user-defined conversion operator is applicable to an anonymous function or method group.
 
-Although an implicit conversion to `object` is permitted, a warning shall be issued, as this may have been unintentional.
+When an expression classified as a method group is implicitly converted to `object` by an anonymous function type conversion, a warning shall be issued, as this may have been unintentional.
 
 > *Example*:
 >
@@ -999,19 +1000,7 @@ Given a user-defined conversion operator that converts from a non-nullable value
 
 ### 10.7.1 General
 
-An *anonymous_method_expression* or *lambda_expression* is classified as an anonymous function ([§12.22](expressions.md#1222-anonymous-function-expressions)). The expression does not have a type, but can be implicitly converted to a compatible delegate type. Some lambda expressions may also be implicitly converted to a compatible expression tree type.
-
-Specifically, an anonymous function `F` is compatible with a delegate type `D` provided:
-
-- If `F` contains an *anonymous_function_signature*, then `D` and `F` have the same number of parameters.
-- If `F` does not contain an *anonymous_function_signature*, then `D` may have zero or more parameters of any type, as long as no parameter of `D` is an output parameter.
-- If `F` has an explicitly typed parameter list, each parameter in `D` has the same modifiers as the corresponding parameter in `F`, ignoring `params` modifiers and default values, and an identity conversion exists between the corresponding parameter in `F`.
-- If `F` has an implicitly typed parameter list, `D` has no reference or output parameters.
-- If `F` has an explicit return type, an identity conversion shall exist from the return type of `F` to the return type of `D`.
-- If the body of `F` is an expression, and *either* `D` has a void return type *or* `F` is async and `D` has a `«TaskType»` return type  ([§15.14.1](classes.md#15141-general)), then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid expression (w.r.t [§12](expressions.md#12-expressions)) that would be permitted as a *statement_expression* ([§13.7](statements.md#137-expression-statements)).
-- If the body of `F` is a block, and *either* `D` has a void return type *or* `F` is async and `D` has a `«TaskType»` return type , then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid block (w.r.t [§13.3](statements.md#133-blocks)) in which no `return` statement specifies an expression.
-- If the body of `F` is an expression, and *either* `F` is non-async and `D` has a non-`void` return type `T`, *or* `F` is async and `D` has a `«TaskType»<T>` return type ([§15.14.1](classes.md#15141-general)), then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid expression (w.r.t [§12](expressions.md#12-expressions)) that is implicitly convertible to `T`.
-- If the body of `F` is a block, and *either* `F` is non-async and `D` has a non-void return type `T`, *or* `F` is async and `D` has a `«TaskType»<T>` return type, then when each parameter of `F` is given the type of the corresponding parameter in `D`, the body of `F` is a valid statement block (w.r.t [§13.3](statements.md#133-blocks)) with a non-reachable end point in which each return statement specifies an expression that is implicitly convertible to `T`.
+An *anonymous_method_expression* or *lambda_expression* is classified as an anonymous function ([§12.22](expressions.md#1222-anonymous-function-expressions)). An implicit anonymous function conversion exists from an expression classified as an anonymous function to a delegate type `D` if the anonymous function is compatible with `D` ([§12.22.3](expressions.md#12223-anonymous-function-bodies)).
 
 > *Example*: The following examples illustrate these rules:
 >
@@ -1091,7 +1080,7 @@ Specifically, an anonymous function `F` is compatible with a delegate type `D`
 >
 > *end example*
 
-A lambda expression `F` is compatible with an expression tree type `Expression<D>` if `F` is compatible with the delegate type `D`. This does not apply to anonymous methods, only lambda expressions.
+An implicit anonymous function conversion exists from a *lambda_expression* `F` to an expression tree type `Expression<D>` if `F` is compatible with the delegate type `D` ([§12.22.3](expressions.md#12223-anonymous-function-bodies)). This conversion does not exist for an *anonymous_method_expression*.
 
 Anonymous functions may influence overload resolution, and participate in type inference. See [§12.6](expressions.md#126-function-members) for further details.
 
@@ -1152,14 +1141,16 @@ The addition of support for checked operators resulted in the addition of the fo
 
 ## 10.8 Method group conversions
 
-An implicit conversion exists from a method group ([§12.2](expressions.md#122-expression-classifications)) to a compatible delegate type ([§21.4](delegates.md#214-delegate-compatibility)). If `D` is a delegate type, and `E` is an expression that is classified as a method group, then `D` is compatible with `E` if and only if `E` contains at least one method that is applicable in its normal form ([§12.6.4.2](expressions.md#12642-applicable-function-member)) to any argument list ([§12.6.2](expressions.md#1262-argument-lists)) having types and modifiers matching the parameter types and modifiers of `D`, as described in the following.
+Let `D` be a delegate type, and let `E` be an expression classified as a method group ([§12.2](expressions.md#122-expression-classifications)). The candidate methods, associated instance expression, and type argument list, if any, are those of the method group produced by member lookup ([§12.5](expressions.md#125-member-lookup)).
 
-The compile-time application of the conversion from a method group `E` to a delegate type `D` is described in the following.
+The following compile-time processing determines whether an implicit method group conversion exists from `E` to `D` and, if so, determines its result:
 
 - A single method `M` is selected corresponding to a method invocation ([§12.8.10.2](expressions.md#128102-method-invocations)) of the form `E(A)`, with the following modifications:
   - The argument list `A` is a list of expressions, each classified as a variable and with the type and modifier (`in`, `out`, or `ref`) of the corresponding parameter in the *parameter_list* of `D` — excepting parameters of type `dynamic`, where the corresponding expression has the type `object` instead of `dynamic`.
   - The candidate methods considered are only those methods that are applicable in their normal form and do not omit any optional parameters ([§12.6.4.2](expressions.md#12642-applicable-function-member)). Thus, candidate methods are ignored if they are applicable only in their expanded form, or if one or more of their optional parameters do not have a corresponding parameter in `D`.
-- A conversion is considered to exist if the algorithm of [§12.8.10.2](expressions.md#128102-method-invocations) produces a single best method `M` which is compatible ([§21.4](delegates.md#214-delegate-compatibility)) with `D`.
+  - When a generic method is considered, its type arguments are either specified by the type argument list associated with `E` or inferred as described in [§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups). During that inference, the parameter types of `D` are used as argument types, and the return type of `D` is not used. The specified or inferred type arguments are used both to select `M` and to invoke it through the resulting delegate.
+- If the algorithm of [§12.8.10.2](expressions.md#128102-method-invocations) does not produce a single best method `M` which is compatible ([§21.4](delegates.md#214-delegate-compatibility)) with `D`, no conversion exists.
+- Otherwise, an implicit method group conversion exists from `E` to `D`, with `M` as the selected method.
 - If the selected method `M` is an instance method, the instance expression associated with `E` determines the target object of the delegate.
 - If the selected method `M` is an extension method which is denoted by means of a member access on an instance expression, that instance expression determines the target object of the delegate.
 - The result of the conversion is a value of type `D`, namely a delegate that refers to the selected method and target object.
@@ -1215,8 +1206,6 @@ As with all other implicit and explicit conversions, the cast operator can be us
 > ```
 >
 > *end example*
-
-A method group conversion can refer to a generic method, either by explicitly specifying type arguments within `E`, or via type inference ([§12.6.3](expressions.md#1263-type-inference)). If type inference is used, the parameter types of the delegate are used as argument types in the inference process. The return type of the delegate is not used for inference. Whether the type arguments are specified or inferred, they are part of the method group conversion process; these are the type arguments used to invoke the target method when the resulting delegate is invoked.
 
 > *Example*:
 >

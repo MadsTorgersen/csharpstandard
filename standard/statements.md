@@ -363,7 +363,13 @@ implicitly_typed_local_variable_declarator
     ;
 ```
 
-An *implicitly_typed_local_variable_declaration* introduces a single local variable, *identifier*. The *expression* or *variable_reference* shall have a compile-time type, `T`. The first alternative declares a variable with an initial value of *expression*; its type is `T?` when `T` is a non-nullable reference type, otherwise its type is `T`. The second alternative declares a ref variable with an initial value of `ref` *variable_reference*; its type is `ref T?` when `T` is a non-nullable reference type, otherwise its type is `ref T`. (*ref_kind* is described in [§15.6.1](classes.md#1561-general).)
+An *implicitly_typed_local_variable_declaration* introduces a single local variable, *identifier*. Except as described below for expressions classified as anonymous functions or method groups, the *expression* or *variable_reference* shall have a compile-time type, `T`. The first alternative declares a variable with an initial value of *expression*; its type is `T?` when `T` is a non-nullable reference type, otherwise its type is `T`. The second alternative declares a ref variable with an initial value of `ref` *variable_reference*; its type is `ref T?` when `T` is a non-nullable reference type, otherwise its type is `ref T`. (*ref_kind* is described in [§15.6.1](classes.md#1561-general).)
+
+When the initializer is an expression `E` classified as an anonymous function or method group with anonymous function type `F`, the following steps are performed:
+
+- The corresponding delegate type `D` is determined from `F`, independently of any target type ([§12.22.8](expressions.md#12228-anonymous-function-type)).
+- The type of the local variable is determined by using `D` in place of `T` in the rule above, including its nullable annotation behavior.
+- The initializer `E` is converted to `D` using an anonymous function conversion ([§10.7](conversions.md#107-anonymous-function-conversions)) or method group conversion ([§10.8](conversions.md#108-method-group-conversions)), according to the classification of `E`.
 
 For a discussion of `scoped`, see [§9.7.3](variables.md#973-the-scoped-modifier).
 
@@ -402,16 +408,14 @@ For a discussion of `scoped`, see [§9.7.3](variables.md#973-the-scoped-modifier
 > var x;                  // Error, no initializer to infer type from
 > var y = {1, 2, 3};      // Error, array initializer not permitted
 > var z = null;           // Error, null does not have a type
-> var u = x => x + 1;     // Error, no natural type
+> var u = x => x + 1;     // Error, parameter type cannot be inferred
 > var v = v++;            // Error, initializer cannot refer to v itself
 > scoped var i = 10;      // Error, i must be a ref or ref struct 
 > ```
 >
 > *end example*
 
-Anonymous functions and method groups with anonymous function types may be used as initializers in an *implicitly_typed_local_variable_declaration*.
-
-Anonymous functions and method groups with anonymous function types may not be used in contexts in which the target is a discard.
+Expressions classified as anonymous functions or method groups with anonymous function types may not be used in contexts in which the target is a discard.
 
 > *Example*:
 >
