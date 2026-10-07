@@ -5108,21 +5108,35 @@ still valid after the new pattern changes.
 When recognising a *relational_expression* of the form `E is R`, the following
 rules apply in order:
 
-- If both the *relational_expression* `is` *type* and *relational_expression*
-  `is` *pattern* alternatives are applicable, and `R` resolves as a *type* to
-  an accessible type, then the *relational_expression* `is` *type* alternative
-  shall be chosen.
-- Otherwise, if `R` can be recognised as a *type_pattern* and does not resolve
-  as a constant expression, the *relational_expression* `is` *pattern*
-  alternative with that *type_pattern* shall be chosen. Its *pattern_type* is
-  resolved as specified in §pattern-types-new-clause.
+- If `R` can be recognised as a *type_group_name*, `E` has a static type `I`,
+  `R` does not resolve as a constant expression, and `R` does not resolve as a
+  *type* to an accessible type `T` that is permitted as the type of a
+  *type_pattern* and for which `I` is pattern compatible with `T`
+  ([§11.2.2](patterns.md#1122-declaration-pattern)), type-group-name lookup
+  (§type-group-names-new-clause) is attempted:
+  - If the lookup is ambiguous, a compile-time error occurs.
+  - If it succeeds and the resulting group contains an unbound generic type,
+    the *relational_expression* `is` *pattern* alternative with a
+    *type_pattern* shall be chosen. Its *pattern_type* is resolved as specified
+    in §pattern-types-new-clause.
+  - Otherwise, including when the *type_group_name* is undefined, no
+    interpretation is selected by this rule.
+- If no interpretation has been selected, both the *relational_expression*
+  `is` *type* and *relational_expression* `is` *pattern* alternatives are
+  applicable, and `R` resolves as a *type* to an accessible type, then the
+  *relational_expression* `is` *type* alternative shall be chosen.
+- If no interpretation has been selected, `R` can be recognised as a
+  *type_pattern*, and `R` does not resolve as a constant expression, the
+  *relational_expression* `is` *pattern* alternative with that *type_pattern*
+  shall be chosen. Its *pattern_type* is resolved as specified in
+  §pattern-types-new-clause.
 
-> *Note*: Ordinary type resolution in the first rule preserves the is-type
-> operator's behavior, including its treatment of nullable value types and
-> types that are not pattern compatible with the input type. The second rule
-> permits omitted type arguments, as in `option is Some`, to be bound as an
-> inferred type pattern without changing the binding of an existing constant
-> pattern. *end note*
+> *Note*: A permitted, pattern-compatible ordinary type suppresses generic
+> inference. Otherwise, a name with generic alternatives can use inference
+> even when an impermissible or incompatible non-generic type has that name.
+> Explicit types and names without generic alternatives retain ordinary
+> is-type handling, including its treatment of nullable value types.
+> Constant-pattern binding is unchanged. *end note*
 
 The `is` operator is described in [§12.15.12](expressions.md#121512-the-is-operator) and the `as` operator is described in [§12.15.13](expressions.md#121513-the-as-operator).
 

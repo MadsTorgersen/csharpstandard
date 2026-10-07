@@ -186,6 +186,13 @@ pattern form.
 > `Some<int>` through the is-pattern operator
 > ([§12.15.1](expressions.md#12151-general)).
 >
+> If `sealed class Some {}` is added to the example, `Option<int>` is not
+> pattern compatible with that non-generic type. Both `option is Some` and
+> `option is Some some` therefore infer `Some<int>`. Replacing that added
+> declaration with `static class Some {}` also causes both forms to infer
+> `Some<int>`, since the non-generic static type is not permitted in the
+> pattern.
+>
 > *end example*
 
 ### 11.2.2 Declaration pattern
