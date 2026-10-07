@@ -140,19 +140,20 @@ types as follows:
 > *end example*
 
 > *Example*: In the following example, the pattern input has type
-> `Option<int>`. The *pattern_type* `Some` resolves to the type group containing
-> `Some<T>`. Type inference uses `Option<int>` as its by-value target type and
-> `Some<T>` as its by-value result type, and infers `int` for `T`. The
-> declaration pattern therefore names `Some<int>`, and `some` has that type.
+> `Base<int>`. The *pattern_type* `Derived` resolves to the type group containing
+> `Derived<T>`. Type inference uses `Base<int>` as its by-value target type and
+> `Derived<T>` as its by-value result type, and infers `int` for `T`. The
+> declaration pattern therefore names `Derived<int>`, and `derived` has that
+> type.
 >
 > ```csharp
-> abstract class Option<T> {}
+> abstract class Base<T> {}
 >
-> sealed class Some<T> : Option<T>
+> sealed class Derived<T> : Base<T>
 > {
 >     public T Value { get; }
 >
->     public Some(T value)
+>     public Derived(T value)
 >     {
 >         Value = value;
 >     }
@@ -160,29 +161,29 @@ types as follows:
 >
 > class Client
 > {
->     static void Use(Option<int> option)
+>     static void Use(Base<int> input)
 >     {
->         if (option is Some some)
+>         if (input is Derived derived)
 >         {
->             int value = some.Value;
+>             int value = derived.Value;
 >         }
 >     }
 > }
 > ```
 >
-> The expression `option is Some` also tests against the inferred type
-> `Some<int>` through the is-pattern operator
+> The expression `input is Derived` also tests against the inferred type
+> `Derived<int>` through the is-pattern operator
 > ([§12.15.1](expressions.md#12151-general)).
 >
-> If `sealed class Some {}` is added to the example, `Option<int>` is not
-> pattern compatible with that non-generic type. Both `option is Some` and
-> `option is Some some` therefore infer `Some<int>`. Replacing that added
-> declaration with `static class Some {}` also causes both forms to infer
-> `Some<int>`, since the non-generic static type is not permitted in the
+> If `sealed class Derived {}` is added to the example, `Base<int>` is not
+> pattern compatible with that non-generic type. Both `input is Derived` and
+> `input is Derived derived` therefore infer `Derived<int>`. Replacing that
+> added declaration with `static class Derived {}` also causes both forms to
+> infer `Derived<int>`, since the non-generic static type is not permitted in the
 > pattern.
 >
-> If the added non-generic type instead derives from `Option<int>`, both it and
-> the inferred `Some<int>` are candidate types. The non-generic type is selected
+> If the added non-generic type instead derives from `Base<int>`, both it and the
+> inferred `Derived<int>` are candidate types. The non-generic type is selected
 > because it did not require type inference.
 >
 > *end example*
