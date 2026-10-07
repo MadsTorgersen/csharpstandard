@@ -98,27 +98,58 @@ Given a pattern input value ([§11.1](patterns.md#111-general)) of static type
 
 - If the *type_group* (§type-groups-new-clause) is a *type*, the
   *pattern_type* resolves to that type.
-- Otherwise, the *type_group_name* (§type-group-names-new-clause) is resolved
-  to a set of unbound types `G`:
-  - If `G` contains a type `T` that is not an unbound generic type, and both of
-    the following conditions hold, the *pattern_type* resolves to `T`. No
-    generic types in `G` are considered:
-    - `T` is permitted as the type in the containing pattern form.
-    - `E` is pattern compatible with `T`
-      ([§11.2.2](patterns.md#1122-declaration-pattern)).
-  - Otherwise, a set of candidate types is determined. For each unbound
-    generic type `C<X₁...Xᵥ>` in `G`, type inference
-    (§type-inference-for-type-patterns-new-clause) is applied. If inference
-    succeeds and the constructed type resulting from the inferred type
-    arguments satisfies its constraints
-    ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
-    candidate.
-  - If there is exactly one candidate type, the *pattern_type* resolves to that
-    type. Otherwise, a compile-time error occurs and the type in the pattern
-    shall be specified in full.
+- Otherwise, type-group-name lookup (§type-group-names-new-clause) is performed.
+  In this context, an undefined *type_group_name* does not by itself cause a
+  compile-time error:
+  - If the *type_group_name* is undefined, the same syntax is instead resolved
+    as a *type*. If that resolution succeeds, the *pattern_type* resolves to
+    that type; otherwise, a compile-time error occurs.
+  - If type-group-name lookup is ambiguous, a compile-time error occurs.
+    Resolution as a *type* is not attempted.
+  - Otherwise, the *type_group_name* resolves to a set of unbound types `G`.
+    The following steps are applied to `G`:
+    - If `G` contains a type `T` that is not an unbound generic type, and both
+      of the following conditions hold, the *pattern_type* resolves to `T`.
+      No generic types in `G` are considered:
+      - `T` is permitted as the type in the containing pattern form.
+      - `E` is pattern compatible with `T`
+        ([§11.2.2](patterns.md#1122-declaration-pattern)).
+    - Otherwise, a set of candidate types is determined. For each unbound
+      generic type `C<X₁...Xᵥ>` in `G`, type inference
+      (§type-inference-for-type-patterns-new-clause) is applied. If inference
+      succeeds and the constructed type resulting from the inferred type
+      arguments satisfies its constraints
+      ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
+      candidate.
+    - If there is exactly one candidate type, the *pattern_type* resolves to
+      that type. Otherwise, a compile-time error occurs and the type in the
+      pattern shall be specified in full.
 
 The resolved type is subject to all restrictions on the type in the containing
 pattern form.
+
+> *Note*: The fallback to resolution as a *type* preserves references to type
+> parameters and aliases for constructed types, which are not unbound types
+> and therefore do not produce a defined *type_group_name*. It does not bypass
+> ambiguity in type-group-name lookup. *end note*
+
+> *Example*: Both declaration patterns below retain ordinary type resolution.
+> The variable `item` has type `T`, and the variable `list` has type
+> `System.Collections.Generic.List<int>`. Neither pattern requires type
+> inference.
+>
+> <!-- Example: {template:"standalone-lib-without-using", name:"PatternTypeFallback"} -->
+> ```csharp
+> using Alias = System.Collections.Generic.List<int>;
+>
+> class C
+> {
+>     static bool Match<T>(object value) =>
+>         value is T item && value is Alias list;
+> }
+> ```
+>
+> *end example*
 
 > *Example*: In the following example, the pattern input has type
 > `Option<int>`. The *pattern_type* `Some` resolves to the type group containing
@@ -139,14 +170,21 @@ pattern form.
 >     }
 > }
 >
-> static void Use(Option<int> option)
+> class Client
 > {
->     if (option is Some some)
+>     static void Use(Option<int> option)
 >     {
->         int value = some.Value;
+>         if (option is Some some)
+>         {
+>             int value = some.Value;
+>         }
 >     }
 > }
 > ```
+>
+> The expression `option is Some` also tests against the inferred type
+> `Some<int>` through the is-pattern operator
+> ([§12.15.1](expressions.md#12151-general)).
 >
 > *end example*
 
