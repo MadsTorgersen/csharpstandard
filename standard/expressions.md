@@ -5108,12 +5108,9 @@ still valid after the new pattern changes.
 When recognising a *relational_expression* of the form `E is R`, the following
 rules apply in order:
 
-- If `R` can be recognised as a *type_group_name*, `E` has a static type `I`,
-  `R` does not resolve as a constant expression, and `R` does not resolve as a
-  *type* to an accessible type `T` that is permitted as the type of a
-  *type_pattern* and for which `I` is pattern compatible with `T`
-  ([§11.2.2](patterns.md#1122-declaration-pattern)), type-group-name lookup
-  (§type-group-names-new-clause) is attempted:
+- If `R` can be recognised as a *type_group_name* and `R` does not resolve as a
+  constant expression, type-group-name lookup (§type-group-names-new-clause)
+  is attempted:
   - If the lookup is ambiguous, a compile-time error occurs.
   - If it succeeds and the resulting group contains an unbound generic type,
     the *relational_expression* `is` *pattern* alternative with a
@@ -5131,11 +5128,11 @@ rules apply in order:
   shall be chosen. Its *pattern_type* is resolved as specified in
   §pattern-types-new-clause.
 
-> *Note*: A permitted, pattern-compatible ordinary type suppresses generic
-> inference. Otherwise, a name with generic alternatives can use inference
-> even when an impermissible or incompatible non-generic type has that name.
-> Explicit types and names without generic alternatives retain ordinary
-> is-type handling, including its treatment of nullable value types.
+> *Note*: For a name with generic alternatives, all bound and inferred types
+> are first filtered for whether they are permitted and pattern compatible. If
+> multiple candidate types remain, a bound type that did not require inference
+> is preferred. Explicit types and names without generic alternatives retain
+> ordinary is-type handling, including its treatment of nullable value types.
 > Constant-pattern binding is unchanged. *end note*
 
 The `is` operator is described in [§12.15.12](expressions.md#121512-the-is-operator) and the `as` operator is described in [§12.15.13](expressions.md#121513-the-as-operator).

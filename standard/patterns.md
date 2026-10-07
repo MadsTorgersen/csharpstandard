@@ -97,28 +97,30 @@ Given a pattern input value ([§11.1](patterns.md#111-general)) of static type
 `E`, the *type_group* is resolved to a set `G` as specified in
 §type-groups-new-clause.
 
-The type to which the *pattern_type* resolves is selected from `G` as follows:
+The set of candidate types is determined from `G` as follows:
 
-- If `G` contains no unbound generic type, the *pattern_type* resolves to the
-  single type in `G`.
-- Otherwise, if `G` contains a type `T` that is not an unbound generic type,
-  and both of the following conditions hold, the *pattern_type* resolves to
-  `T`. No generic types in `G` are considered:
-  - `T` is permitted as the type in the containing pattern form.
-  - `E` is pattern compatible with `T`
-    ([§11.2.2](patterns.md#1122-declaration-pattern)).
-- Otherwise, a set of candidate types is determined. For each unbound generic
-  type `C<X₁...Xᵥ>` in `G`, type inference
+- For each bound type `T` in `G`, `T` is a candidate if it is permitted as the
+  type in the containing pattern form and `E` is pattern compatible with `T`
+  ([§11.2.2](patterns.md#1122-declaration-pattern)).
+- For each unbound generic type `C<X₁...Xᵥ>` in `G`, type inference
   (§type-inference-for-type-patterns-new-clause) is applied. If inference
-  succeeds and the constructed type resulting from the inferred type
-  arguments satisfies its constraints
-  ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
-  candidate. If there is exactly one candidate type, the *pattern_type*
-  resolves to that type. Otherwise, a compile-time error occurs and the type
-  in the pattern shall be specified in full.
+  succeeds, the constructed type resulting from the inferred type arguments
+  satisfies its constraints
+  ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is
+  permitted as the type in the containing pattern form, and `E` is pattern
+  compatible with that constructed type, then that constructed type is a
+  candidate.
 
-The resolved type is subject to all restrictions on the type in the containing
-pattern form.
+The type to which the *pattern_type* resolves is selected from the candidate
+types as follows:
+
+- If there is exactly one candidate type, the *pattern_type* resolves to that
+  type.
+- Otherwise, if there are multiple candidate types and exactly one was taken
+  directly from `G` without type inference, the *pattern_type* resolves to that
+  type.
+- Otherwise, a compile-time error occurs and the type in the pattern shall be
+  specified in full.
 
 > *Example*: Both declaration patterns below retain ordinary type resolution.
 > The variable `item` has type `T`, and the variable `list` has type
@@ -179,6 +181,10 @@ pattern form.
 > declaration with `static class Some {}` also causes both forms to infer
 > `Some<int>`, since the non-generic static type is not permitted in the
 > pattern.
+>
+> If the added non-generic type instead derives from `Option<int>`, both it and
+> the inferred `Some<int>` are candidate types. The non-generic type is selected
+> because it did not require type inference.
 >
 > *end example*
 
