@@ -907,6 +907,10 @@ A *lower-bound inference from* a type `U` *to* a type `V` is made as follows:
       - If the parameter is by value, then an upper-bound inference is made.
       - If the parameter is by reference, then an exact inference is made.
     > *Note*: This is only applicable in unsafe code. *end note*
+- Otherwise, if `V` is a union type, or a nullable value type whose underlying
+  type is a union type, and there is no ordinary lower-bound structural
+  correspondence from `U` to `V`, a *lower-bound union-case inference*
+  (§union-case-inferences-new-clause) is made from `U` to `V`.
 - Otherwise, no inferences are made.
 
 #### 12.6.3.12 Upper-bound inferences
@@ -938,7 +942,316 @@ An *upper-bound inference from* a type `U` *to* a type `V` is made as follows:
     - If the parameter is by value, then a lower-bound inference is made.
     - If the parameter is by reference, then an exact inference is made.
   > *Note*: This is only applicable in unsafe code. *end note*
+- Otherwise, if `U` is a union type, or a nullable value type whose underlying
+  type is a union type, and there is no ordinary upper-bound structural
+  correspondence from `U` to `V`, an *upper-bound union-case inference*
+  (§union-case-inferences-new-clause) is made from `U` to `V`.
 - Otherwise, no inferences are made.
+
+#### §union-case-inferences-new-clause Union-case inferences
+
+**TBD prerequisite**: This draft depends on the union-type and case-type model
+in the [unions proposal at commit
+0df79080bfbd3d0120ad1904ed0a662fd69be6b9](https://github.com/dotnet/csharplang/blob/0df79080bfbd3d0120ad1904ed0a662fd69be6b9/proposals/csharp-15.0/unions.md).
+Union declarations, recognition of union types and their union creation
+members, union conversions, and union pattern matching are not specified in
+this standard. Their specification is a prerequisite, not introduced by this
+clause. In particular, a union/case relationship is not CLR inheritance and
+does not establish an identity conversion between the union and the case.
+
+For the purposes of this clause, the *case types* of a union type are the
+parameter types of its union creation members, as established by that model.
+For a constructed union type, its type arguments, including those of any
+enclosing type, are substituted into those case types. The resulting set is
+finite and is determined from declarations, not from a union value's contents.
+Case types requiring a choice of additional type arguments of a generic
+creation member do not participate in union-case inference.
+
+**TBD prerequisite**: Establishing case types from union member providers and
+inherited members, and the validity of generic union creation members, remain
+the responsibility of the union specification. This clause neither performs
+overload resolution of those members nor infers their type arguments.
+
+An *ordinary inference* is a lower-bound or upper-bound inference performed
+without the union-case inference rules, including in recursive inferences.
+An *ordinary structural correspondence* of either kind exists from `S` to `T`
+if the rule for an unfixed type variable, or one of the array, nullable,
+constructed-type, or function-pointer structural cases in the corresponding
+bound-inference clause ([§12.6.3.11](expressions.md#126311-lower-bound-inferences)
+or [§12.6.3.12](expressions.md#126312-upper-bound-inferences)) applies.
+For this test only, uniqueness restrictions
+on constructed-type correspondences are disregarded. Thus, multiple matching
+base or interface instantiations constitute a structural correspondence,
+although ordinary inference from them produces no bounds.
+
+Determining a structural correspondence does not add bounds, fix type
+variables, test constraints, or test whether a conversion exists. It does not
+require corresponding type arguments to be identical. Neither a failed
+uniqueness test nor a correspondence that produces no bounds permits
+union-case inference to replace an ordinary inference.
+
+A *lower-bound union-case inference from* `U` *to* `V` is made as follows:
+
+- Let `W` be `V`, or its underlying type if `V` is a nullable value type.
+  `W` is the union type whose case types are considered.
+- Determine the set of case types `K` of `W` for which an ordinary lower-bound
+  structural correspondence exists from `U` to `K`.
+- If this set contains exactly one case type `K`, an ordinary lower-bound
+  inference is made from `U` to each occurrence of `K` in the substituted
+  union creation member parameter types.
+- Otherwise, no bounds are added by this union-case inference.
+
+An *upper-bound union-case inference from* `U` *to* `V` is made as follows:
+
+- Let `W` be `U`, or its underlying type if `U` is a nullable value type.
+  `W` is the union type whose case types are considered.
+- Determine the set of case types `K` of `W` for which an ordinary upper-bound
+  structural correspondence exists from `K` to `V`.
+- If this set contains exactly one case type `K`, an ordinary upper-bound
+  inference is made from each occurrence of `K` in the substituted union
+  creation member parameter types to `V`.
+- Otherwise, no bounds are added by this union-case inference.
+
+Case types that are identical after substitution constitute one member of
+these sets. Inference from all occurrences of that member retains the
+ordinary treatment of distinctions such as `dynamic` and nullable reference
+annotations; an arbitrary representative is not chosen.
+Selection is performed before any bounds from the selected case
+are added. It is not affected by bounds obtained elsewhere, constraints, the
+order of case declarations, or the conversions that would be available after
+fixing. Bounds from alternative cases are not combined. A selected case that
+produces no bounds does not cause another case to be tried.
+
+> *Note*: Lower-bound inference follows the case-to-union direction of a union
+> conversion: the argument type is compared with a case of the parameter
+> type. Upper-bound inference compares a case of the target union type with
+> the result type. These are not two directions of a conversion between the
+> union and the case. Inference from a union argument to a case parameter, or
+> from a case target to a union result, is not added by these rules.
+>
+> The ordinary inference on the selected case retains the existing rules for
+> invariant, covariant, and contravariant type parameters, and for types not
+> known to be reference types. In particular, choosing a generic class case
+> usually produces exact bounds on its arguments, even though the enclosing
+> inference is an upper-bound or lower-bound inference. *end note*
+
+An exact inference ([§12.6.3.10](expressions.md#126310-exact-inferences)) does
+not follow a union/case relationship. Union-case inference does not add union
+types to the candidate types for fixing
+([§12.6.3.13](expressions.md#126313-fixing)), infer a union from several case
+values, or infer from a user-defined conversion operator. It does not search
+the unions to which a type might belong, or treat a type parameter's
+constraints as additional union types.
+
+The ordinary inference on a selected case does not perform another union-case
+inference. Nested union types can be compared as ordinary constructed types,
+but their cases are not searched recursively. Even when a union is its own
+case, or case relationships form a cycle, no further union-case step is
+performed on that recursive inference path.
+
+No nullable value type is unwrapped by these rules other than the union-side
+type `W`. Nullable case types are compared using ordinary structural
+correspondences. Nullable reference annotations do not introduce distinct
+nominal case shapes; the existing type and inference rules apply.
+
+**TBD**: A nullable value-type case does not provide bounds for an unwrapped
+non-nullable case result or pattern type under this draft, even where a union
+conversion or union matching would be permitted. Whether to add that
+correspondence requires a separate decision. Transitive union-case inference,
+conversion-based case selection, and selection using other bounds are also
+not specified by this draft.
+
+After bounds are collected, fixing and the consuming context's constraint,
+conversion, and applicability checks still apply. A case selection does not
+establish that an argument, result, or pattern is valid in that context. If a
+type variable has no bounds, or its bounds conflict, fixing fails as usual.
+Ambiguous case selection alone does not cause the whole inference to fail:
+other inputs can still supply sufficient bounds.
+
+> *Note*: In particular, finding bounds during method group inference does
+> not relax delegate compatibility
+> ([§21.4](delegates.md#214-delegate-compatibility)). A union conversion is not
+> an identity or implicit reference conversion. The analogous signature
+> restrictions for function pointers also remain in force
+> ([§24.5](unsafe-code.md#245-pointer-conversions)). Finding bounds inside a
+> variant generic type likewise does not make a union conversion an allowed
+> variance conversion
+> ([§19.2.3.3](interfaces.md#19233-variance-conversion)). *end note*
+
+> *Example*: Assume the following declarations under the prerequisite union
+> model; the case types have no inheritance relationship with the union:
+>
+> ```csharp
+> public record class None();
+> public record class Some<T>(T Value);
+> public union Option<T>(None, Some<T>);
+>
+> static Some<T> Create<T>() => default!;
+> static void Accept<T>(Option<T> value) {}
+>
+> Option<int> result = Create();
+> Accept(new Some<int>(42));
+> ```
+>
+> For `Create()`, the generalized algorithm makes an upper-bound inference
+> from the target `Option<int>` to the result `Some<T>`. Its only structurally
+> corresponding case is `Some<int>`. Ordinary upper-bound inference from
+> `Some<int>` to `Some<T>` adds an exact bound `int` for `T`.
+>
+> For `Accept`, lower-bound inference from `Some<int>` to `Option<T>` selects
+> `Some<T>`. Ordinary lower-bound inference from `Some<int>` to `Some<T>`
+> likewise adds an exact bound `int`. In both cases, fixing infers `int`.
+> The final uses additionally depend on union conversions being specified.
+>
+> The same upper-bound comparison can be used by a context that supplies a
+> union input as target and a generic case as result, without introducing a
+> pretend method call. This clause does not introduce such a context.
+>
+> *end example*
+
+> *Example*: The following comparisons illustrate case substitution and
+> ambiguity. All type variables shown as `X` or `Y` are unfixed.
+>
+> ```csharp
+> public record class Pair<A, B>(A First, B Second);
+> public union Swapped<A, B>(Pair<B, A>);
+> public union Repeated<T>(Pair<T, T>);
+> public union Alternatives<T>(Pair<T, int>, Pair<string, T>);
+> public union IntOrText(Some<int>, Some<string>);
+> public union Fixed(Some<int>, None);
+> public union Partial<A, B>(Some<A>);
+> public union Choice<A, B>(Some<A>, Some<B>);
+> ```
+>
+> | Inference | From | To | Bounds added by union-case inference |
+> | --- | --- | --- | --- |
+> | Lower | `Pair<string, int>` | `Swapped<X, Y>` | Exact `int` for `X`, exact `string` for `Y` |
+> | Upper | `Swapped<int, string>` | `Pair<X, Y>` | Exact `string` for `X`, exact `int` for `Y` |
+> | Lower | `Pair<int, string>` | `Repeated<X>` | Exact `int` and `string` for `X`; fixing fails |
+> | Lower | `Pair<string, int>` | `Alternatives<X>` | None; two distinct case shapes correspond |
+> | Upper | `IntOrText` | `Some<X>` | None; two distinct case types correspond |
+> | Upper | `Fixed` | `Some<X>` | Exact `int` for `X` |
+> | Lower | `None` | `Option<X>` | None; the non-generic case supplies no information about `X` |
+> | Lower | `Some<int>` | `Partial<X, Y>` | Exact `int` for `X`; no bounds for `Y`, so fixing fails |
+> | Lower | `Option<int>` | `Some<X>` | None; the source union is not unwrapped |
+> | Upper | `Some<int>` | `Option<X>` | None; the result union is not unwrapped |
+> | Upper | `Choice<int, int>` | `Some<X>` | Exact `int` for `X`; identical cases count once |
+>
+> Fixed portions of a case shape are not conversion filters. For example,
+> both cases of `Alternatives<X>` correspond structurally to
+> `Pair<string, int>`, despite implying different values for `X`.
+> In contrast, `Fixed` is a non-generic union whose generic case does supply
+> bounds. If substitution makes two declared case types identical, they are
+> one case type rather than two alternatives.
+> With `Choice<object, dynamic>` as the source, inference retains the bounds
+> from both occurrences of that one case type, and the ordinary preference
+> for `dynamic` when fixing ([§8.7](types.md#87-the-dynamic-type)) applies.
+>
+> *end example*
+
+> *Example*: Variance is taken from the selected case, not the union:
+>
+> ```csharp
+> public union Sequence<T>(IEnumerable<T>);
+> public union Sink<T>(Action<T>);
+> public union One<T>(T);
+> ```
+>
+> Lower-bound inference from `List<string>` to `Sequence<X>` adds a lower
+> bound `string` for `X`. Upper-bound inference from `Sequence<string>` to
+> `List<X>` adds an upper bound `string`. Lower-bound inference from
+> `Action<string>` to `Sink<X>` adds an upper bound `string`, and upper-bound
+> inference from `Sink<string>` to `Action<X>` adds a lower bound `string`.
+> With `int` in place of `string`, these comparisons add exact bounds because
+> `int` is not a reference type. Lower-bound inference from `int` to `One<X>`
+> adds a lower bound `int` directly through the case `X`.
+>
+> Lower-bound inference from `IEnumerable<Some<int>>` to
+> `IEnumerable<Option<X>>` can add an exact bound `int` through the recursive
+> inference on the covariant argument. Nevertheless, the resulting types
+> `IEnumerable<Some<int>>` and `IEnumerable<Option<int>>` have no variance
+> conversion: a union conversion is not an implicit reference conversion.
+>
+> *end example*
+
+> *Example*: The following comparisons distinguish ordinary inference,
+> union-case inference, and unsupported correspondences:
+>
+> ```csharp
+> public struct Cell<T> {}
+> public union Maybe<T>(Cell<T>?);
+> public union Outer<T>(Option<T>);
+> public union Restricted<T>(Some<T>) where T : class;
+>
+> class Base<T> {}
+> class Derived<T> : Base<T> {}
+>
+> public interface I<T> {}
+> class ImplementsBoth : I<int>, I<string> {}
+> public union Interfaces<T>(I<T>);
+> ```
+>
+> Exact inference from `Some<int>` to `Option<X>`, including for an explicit
+> `ref`, `out`, or `in` argument, adds no bounds. Exact inference from
+> `Option<int>` to `Option<X>` still adds an exact bound `int` by the ordinary
+> same-generic-type rule. Ordinary lower-bound inference from `Derived<int>`
+> to `Base<X>` and upper-bound inference from `Base<int>` to `Derived<X>`
+> still add an exact bound `int`; exact inference between those different
+> generic types still adds no bounds.
+>
+> Lower-bound inference from `ImplementsBoth` to `Interfaces<X>` selects
+> `I<X>`, but the ordinary inference from `ImplementsBoth` to `I<X>` adds no
+> bounds because the implemented instantiation is not unique.
+>
+> Upper-bound inference from `Option<int>?` to `Some<X>` adds an exact bound
+> `int`, because the nullable wrapper of the union is removed. Upper-bound
+> inference from `Maybe<int>` to `Cell<X>` adds no bounds, while inference to
+> `Cell<X>?` adds an exact bound `int` through the ordinary nullable rule.
+> Lower-bound inference from `Cell<int>` to `Maybe<X>` adds no bounds, while
+> inference from `Cell<int>?` adds an exact bound `int`.
+>
+> Upper-bound inference from `Outer<int>` to `Some<X>` adds no bounds: it does
+> not search the cases of `Option<int>`. Inference from `Outer<int>` to
+> `Option<X>` does add an exact bound `int`. A conversion operator from some
+> unrelated `Wrapper<int>` to `Some<int>` does not provide a correspondence
+> from `Wrapper<int>` to `Option<X>`.
+>
+> Lower-bound inference from `Some<int>` to `Restricted<X>` adds an exact
+> bound `int`, but `Restricted<int>` does not satisfy its constraint. The
+> consuming context rejects that constructed type; inference does not choose
+> another case or type argument to satisfy the constraint.
+>
+> *end example*
+
+> *Example*: Additional bounds can change an inference that would otherwise
+> succeed. Assume the target type is supplied to inference in these uses:
+>
+> ```csharp
+> public union Broad<T>(Some<T>, object);
+>
+> static Some<T> Wrap<T>(T value) => new Some<T>(value);
+> static Some<T> WrapRef<T>(ref T value) => new Some<T>(value);
+>
+> Broad<object> widened = Wrap("text");
+>
+> string text = "text";
+> Broad<object> rejected = WrapRef(ref text);
+> ```
+>
+> Without union-case inference, the argument infers `string` for `T` in both
+> calls, and `Some<string>` can convert to `Broad<object>` through its
+> `object` case. With union-case inference, the target contributes an exact
+> bound `object` through `Some<object>`: `object` itself has no ordinary
+> structural correspondence to `Some<T>`.
+>
+> In `Wrap`, this exact bound and the argument's lower bound `string` fix `T`
+> to `object`, changing the constructed result type. In `WrapRef`, it
+> conflicts with the argument's exact bound `string`, so inference fails.
+> New bounds can also make previously unsuccessful overload candidates
+> succeed; the existing overload resolution rules then apply to that changed
+> candidate set.
+>
+> *end example*
 
 #### 12.6.3.13 Fixing
 
