@@ -84,8 +84,8 @@ The order of evaluation of operations and side effects during pattern-matching (
 
 ### §pattern-types-new-clause Pattern types
 
-A *pattern_type* identifies the type tested by a *declaration_pattern* or
-*type_pattern*.
+A *pattern_type* identifies the type tested by a *declaration_pattern*,
+*type_pattern*, or typed *positional_pattern*.
 
 ```ANTLR
 pattern_type
@@ -143,32 +143,22 @@ types as follows:
 > `Base<int>`. The *pattern_type* `Derived` resolves to the type group containing
 > `Derived<T>`. Type inference uses `Base<int>` as its by-value target type and
 > `Derived<T>` as its by-value result type, and infers `int` for `T`. The
-> declaration pattern therefore names `Derived<int>`, and `derived` has that
-> type.
+> positional pattern therefore tests against `Derived<int>`, and `value` has
+> type `int`.
 >
 > ```csharp
-> abstract class Base<T> {}
->
-> sealed class Derived<T> : Base<T>
+> int Use(Base<int> input)
 > {
->     public T Value { get; }
->
->     public Derived(T value)
+>     if (input is Derived(var value))
 >     {
->         Value = value;
+>         return value;
 >     }
+>
+>     ...
 > }
 >
-> class Client
-> {
->     static void Use(Base<int> input)
->     {
->         if (input is Derived derived)
->         {
->             int value = derived.Value;
->         }
->     }
-> }
+> abstract record class Base<T>(T Value);
+> sealed record class Derived<T>(T Value) : Base<T>(Value);
 > ```
 >
 > The expression `input is Derived` also tests against the inferred type
@@ -177,7 +167,7 @@ types as follows:
 >
 > If `sealed class Derived {}` is added to the example, `Base<int>` is not
 > pattern compatible with that non-generic type. Both `input is Derived` and
-> `input is Derived derived` therefore infer `Derived<int>`. Replacing that
+> `input is Derived(var value)` therefore infer `Derived<int>`. Replacing that
 > added declaration with `static class Derived {}` also causes both forms to
 > infer `Derived<int>`, since the non-generic static type is not permitted in the
 > pattern.
@@ -338,7 +328,7 @@ A *positional_pattern* checks that the input value is not `null`, extracts a seq
 
 ```ANTLR
 positional_pattern
-    : type? '(' subpatterns? ')' property_subpattern? simple_designation?
+    : pattern_type? '(' subpatterns? ')' property_subpattern? simple_designation?
     ;
 subpatterns
     : subpattern (',' subpattern)*
@@ -355,9 +345,9 @@ subpattern_name
 
 Let *n* be the number of *subpattern*s appearing between the parentheses. The matching strategy is selected at compile time by applying the following cases in order; the first case whose conditions are satisfied is used, and the remaining cases are not considered. Once a case is selected, that strategy is committed: any compile-time error stated within that case is reported, and matching does not fall through to a subsequent case.
 
-1. **Tuple form.** If *type* is omitted and the static type of the input value is a tuple type ([§8.3.11](types.md#8311-tuple-types)) or if the input value is a tuple literal ([§12.8.6](expressions.md#1286-tuple-literals)), then this case applies. It is a compile-time error if *n* is not equal to the arity of that tuple type. At runtime, each tuple element is matched against the corresponding *subpattern*; the match succeeds if all of these succeed. If any *subpattern* has an *identifier*, that *identifier* shall name the tuple element at the corresponding position in the tuple type.
-2. **Deconstruct form.** Otherwise, if either *type* is present, or *type* is omitted and the static type of the input value contains an accessible `Deconstruct` method ([§12.7](expressions.md#127-deconstruction)), then this case applies. Let *D* be *type* if *type* is present; otherwise let *D* be the static type of the input value. A `Deconstruct` method is selected from *D* using the same overload-resolution rules as for a deconstruction declaration, with the additional requirement that its number of `out` parameters is equal to *n*; it is a compile-time error if no such method exists. If *type* is present, it is a compile-time error if the static type of the input value is not pattern compatible ([§11.2.2](patterns.md#1122-declaration-pattern)) with *type*; at runtime the input value is tested against *type* and, if that test fails, the positional pattern match fails. Otherwise, the input value is converted to *D* and the selected `Deconstruct` method is invoked with fresh variables receiving its `out` parameters. Each received value is matched against the corresponding *subpattern*, and the match succeeds if all of these succeed. If any *subpattern* has an *identifier*, that *identifier* shall name the parameter at the corresponding position of `Deconstruct`.
-3. **ITuple form.** Otherwise, if *type* is omitted, no *subpattern* has an *identifier*, and the static type of the input value is `object`, `System.Runtime.CompilerServices.ITuple`, or a type that has an implicit reference conversion to `System.Runtime.CompilerServices.ITuple`, then this case applies. At runtime, the input value is tested for being a non-`null` instance of `System.Runtime.CompilerServices.ITuple`; if that test fails, the positional pattern match fails. Otherwise, the value’s `Length` property is read and, if it is not equal to *n*, the positional pattern match fails. Otherwise, for each *i* from 1 to *n*, the value obtained by indexing the input value with *i* − 1 is matched against the *i*-th *subpattern*, and the match succeeds if all of these succeed.
+1. **Tuple form.** If *pattern_type* is omitted and the static type of the input value is a tuple type ([§8.3.11](types.md#8311-tuple-types)) or if the input value is a tuple literal ([§12.8.6](expressions.md#1286-tuple-literals)), then this case applies. It is a compile-time error if *n* is not equal to the arity of that tuple type. At runtime, each tuple element is matched against the corresponding *subpattern*; the match succeeds if all of these succeed. If any *subpattern* has an *identifier*, that *identifier* shall name the tuple element at the corresponding position in the tuple type.
+2. **Deconstruct form.** Otherwise, if either *pattern_type* is present, or *pattern_type* is omitted and the static type of the input value contains an accessible `Deconstruct` method ([§12.7](expressions.md#127-deconstruction)), then this case applies. Let *D* be the type to which *pattern_type* resolves if *pattern_type* is present; otherwise let *D* be the static type of the input value. A `Deconstruct` method is selected from *D* using the same overload-resolution rules as for a deconstruction declaration, with the additional requirement that its number of `out` parameters is equal to *n*; it is a compile-time error if no such method exists. If *pattern_type* is present, at runtime the input value is tested against *D* and, if that test fails, the positional pattern match fails. Otherwise, the input value is converted to *D* and the selected `Deconstruct` method is invoked with fresh variables receiving its `out` parameters. Each received value is matched against the corresponding *subpattern*, and the match succeeds if all of these succeed. If any *subpattern* has an *identifier*, that *identifier* shall name the parameter at the corresponding position of `Deconstruct`.
+3. **ITuple form.** Otherwise, if *pattern_type* is omitted, no *subpattern* has an *identifier*, and the static type of the input value is `object`, `System.Runtime.CompilerServices.ITuple`, or a type that has an implicit reference conversion to `System.Runtime.CompilerServices.ITuple`, then this case applies. At runtime, the input value is tested for being a non-`null` instance of `System.Runtime.CompilerServices.ITuple`; if that test fails, the positional pattern match fails. Otherwise, the value’s `Length` property is read and, if it is not equal to *n*, the positional pattern match fails. Otherwise, for each *i* from 1 to *n*, the value obtained by indexing the input value with *i* − 1 is matched against the *i*-th *subpattern*, and the match succeeds if all of these succeed.
 4. Otherwise, no case applies and the *positional_pattern* is a compile-time error.
 
 The order in which subpatterns are matched at runtime is unspecified, and a failed match might not attempt to match all subpatterns.
@@ -695,7 +685,10 @@ In a *conjunctive_pattern*, the *input type* of the second pattern is narrowed b
 
 - If `P` is a type pattern, the *narrowed type* is the type of the type pattern’s type.
 - Otherwise, if `P` is a declaration pattern, the *narrowed type* is the type of the declaration pattern’s type.
-- Otherwise, if `P` is a recursive pattern that gives an explicit type, the *narrowed type* is that type.
+- Otherwise, if `P` is a positional pattern with a *pattern_type*, the
+  *narrowed type* is the type to which that *pattern_type* resolves.
+- Otherwise, if `P` is another recursive pattern that gives an explicit type,
+  the *narrowed type* is that type.
 - Otherwise, if `P` is matched via the rules for `ITuple` in a *positional_pattern* ([§11.2.5](patterns.md#1125-positional-pattern)), the *narrowed type* is the type `System.ITuple`.
 - Otherwise, if `P` is a constant pattern where the constant is not the null constant and where the expression has no *constant expression conversion* to the *input type*, the *narrowed type* is the type of the constant.
 - Otherwise, if `P` is a relational pattern where the constant expression has no *constant expression conversion* to the *input type*, the *narrowed type* is the type of the constant.
