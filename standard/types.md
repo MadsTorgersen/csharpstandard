@@ -705,12 +705,15 @@ type_group
     ;
 ```
 
-When recognizing a *type_group*, if both *type* and *type_group_name* are applicable, *type_group_name* is chosen.
-
 A *type_group* is resolved as follows:
 
-- A *type_group* that is a *type* resolves to a singleton set containing that type.
-- A *type_group* that is a *type_group_name* resolves to the set of unbound types found by type-group-name lookup (§type-group-names-new-clause).
+- If the input is applicable as a *type_group_name* and type-group-name lookup (§type-group-names-new-clause) succeeds, the *type_group* resolves to the set of unbound types found by that lookup.
+- Otherwise, if type-group-name lookup is ambiguous, a compile-time error occurs.
+- Otherwise, type-group-name lookup is undefined. If the input is applicable as a *type* and resolves to a type, the *type_group* resolves to a singleton set containing that type; otherwise, a compile-time error occurs.
+
+> *Example*: Within a declaration `class C<T>`, resolution of the type group `T` first performs type-group-name lookup. That lookup is undefined because it finds the type parameter `T`, which is not an unbound type. The input is then resolved as a *type*, producing the singleton set containing the type parameter `T`. *end example*
+
+> *Example*: Given the alias `using A = System.Collections.Generic.List<int>;`, resolution of the type group `A` first performs type-group-name lookup. That lookup is undefined because the alias refers to a constructed type, not an unbound type. The input is then resolved as a *type*, producing the singleton set containing `System.Collections.Generic.List<int>`. *end example*
 
 ### 8.4.5 Satisfying constraints
 

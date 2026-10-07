@@ -1208,7 +1208,7 @@ If the *type_group_name* has the form `A::I`, where `A` and `I` are identifiers,
 
 After the result is found:
 
-- If it is empty or contains an entity that is not an unbound type, the *type_group_name* is undefined and a compile-time error occurs.
+- If it is empty or contains an entity that is not an unbound type, the *type_group_name* is undefined.
 - Otherwise, if it contains two distinct types having the same number of type parameters, the *type_group_name* is ambiguous and a compile-time error occurs.
 - Otherwise, the *type_group_name* resolves to the set of unbound types in the result.
 
