@@ -737,6 +737,8 @@ When arguments are omitted from a function member with corresponding optional pa
 
 - Invocation of a generic method named in an *invocation_expression* (§type-inference-for-method-invocations-new-clause).
 - Invocation of an instance constructor of a generic type in an *object_creation_expression* (§type-inference-for-object-creation-expressions-new-clause).
+- Resolution of a generic type named by a *pattern_type*
+  (§type-inference-for-type-patterns-new-clause).
 - Conversion of method groups with generic overloads ([§12.6.3.16](expressions.md#126316-type-inference-for-conversion-of-method-groups)).
 - Finding the best common type of a set of expressions ([§12.6.3.17](expressions.md#126317-finding-the-best-common-type-of-a-set-of-expressions)).
 
@@ -1114,6 +1116,19 @@ Additionally, `Tₑ` is the target type of the object creation expression, if it
 > The target type of the object creation expression is `Box<string>`, and its result type is `Box<T>`. Upper-bound inference from the target type to the result type produces an exact bound of `string` for `T`, so `T` is inferred to be `string`.
 >
 > *end example*
+
+#### §type-inference-for-type-patterns-new-clause Type inference for type patterns
+
+Type inference is applied separately to each unbound generic type named by a
+*pattern_type* (§pattern-types-new-clause) when resolving that *pattern_type*.
+
+For a candidate generic type `C<X₁...Xᵥ>`, the type parameters `X₁...Xᵥ` and
+their constraints are those of the generic type. The list of parameter types is
+empty. The result type `T₀` is `C<X₁...Xᵥ>`, and the result is by-value.
+
+The list of argument expressions is empty. The target type `Tₑ` is the static
+type of the pattern input value ([§11.1](patterns.md#111-general)), and the
+target is by-value.
 
 #### 12.6.3.16 Type inference for conversion of method groups
 

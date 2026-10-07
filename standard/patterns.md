@@ -82,13 +82,81 @@ Each pattern form defines the set of values for which the pattern *matches* the 
 
 The order of evaluation of operations and side effects during pattern-matching (calls to `Deconstruct`, property accesses, and invocations of members of `System.Runtime.CompilerServices.ITuple`) is not specified.
 
+### §pattern-types-new-clause Pattern types
+
+A *pattern_type* identifies the type tested by a *declaration_pattern* or
+*type_pattern*.
+
+```ANTLR
+pattern_type
+    : type_group
+    ;
+```
+
+Given a pattern input value ([§11.1](patterns.md#111-general)) of static type
+`E`, a *pattern_type* is resolved as follows:
+
+- If the *type_group* (§type-groups-new-clause) is a *type*, the
+  *pattern_type* resolves to that type.
+- Otherwise, the *type_group_name* (§type-group-names-new-clause) is resolved
+  to a set of unbound types `G`:
+  - If `G` contains a type `T` that is not an unbound generic type, and both of
+    the following conditions hold, the *pattern_type* resolves to `T`. No
+    generic types in `G` are considered:
+    - `T` is permitted as the type in the containing pattern form.
+    - `E` is pattern compatible with `T`
+      ([§11.2.2](patterns.md#1122-declaration-pattern)).
+  - Otherwise, a set of candidate types is determined. For each unbound
+    generic type `C<X₁...Xᵥ>` in `G`, type inference
+    (§type-inference-for-type-patterns-new-clause) is applied. If inference
+    succeeds and the constructed type resulting from the inferred type
+    arguments satisfies its constraints
+    ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
+    candidate.
+  - If there is exactly one candidate type, the *pattern_type* resolves to that
+    type. Otherwise, a compile-time error occurs and the type in the pattern
+    shall be specified in full.
+
+The resolved type is subject to all restrictions on the type in the containing
+pattern form.
+
+> *Example*: In the following example, the pattern input has type
+> `Option<int>`. The *pattern_type* `Some` resolves to the type group containing
+> `Some<T>`. Type inference uses `Option<int>` as its by-value target type and
+> `Some<T>` as its by-value result type, and infers `int` for `T`. The
+> declaration pattern therefore names `Some<int>`, and `some` has that type.
+>
+> ```csharp
+> abstract class Option<T> {}
+>
+> sealed class Some<T> : Option<T>
+> {
+>     public T Value { get; }
+>
+>     public Some(T value)
+>     {
+>         Value = value;
+>     }
+> }
+>
+> static void Use(Option<int> option)
+> {
+>     if (option is Some some)
+>     {
+>         int value = some.Value;
+>     }
+> }
+> ```
+>
+> *end example*
+
 ### 11.2.2 Declaration pattern
 
 A *declaration_pattern* is used to test that a value has a given type and, if the test succeeds, to optionally provide the value in a variable of that type.
 
 ```ANTLR
 declaration_pattern
-    : type simple_designation
+    : pattern_type simple_designation
     ;
 simple_designation
     : discard_designation
@@ -106,17 +174,20 @@ When recognising a *simple_designation* if both the *discard_designation* and *s
 
 > *Note*: ANTLR makes the specified choice automatically due to the ordering of the alternatives of *simple_designation*. *end note*
 
-It is a compile-time error if the *type* is a nullable value type ([§8.3.12](types.md#8312-nullable-value-types)) or a nullable reference type ([§8.9.3](types.md#893-nullable-reference-types)).
+Let `T` be the type to which the *pattern_type* resolves
+(§pattern-types-new-clause).
 
-The runtime type of the value is tested against the *type* in the pattern using the same rules specified in the is-type operator ([§12.15.12.1](expressions.md#1215121-the-is-type-operator)). If the test succeeds, the pattern *matches* that value.
+It is a compile-time error if `T` is a nullable value type ([§8.3.12](types.md#8312-nullable-value-types)) or a nullable reference type ([§8.9.3](types.md#893-nullable-reference-types)).
+
+The runtime type of the value is tested against `T` using the same rules specified in the is-type operator ([§12.15.12.1](expressions.md#1215121-the-is-type-operator)). If the test succeeds, the pattern *matches* that value.
 
 > *Note*: The is-type expression `e is T` and the declaration pattern `e is T _` are equivalent when both are valid. *end note*
 
-Given a pattern input value ([§11.1](patterns.md#111-general)) *e*, if the *simple_designation* is a *discard_designation*, denoting a discard ([§9.2.9.2](variables.md#9292-discards)), the value of *e* is not bound to anything. Otherwise, if the *simple_designation* is a *single_variable_designation*, a local variable ([§9.2.9](variables.md#929-local-variables)) of the given type named by the given identifier is introduced. That local variable is assigned the value of the pattern input value when the pattern *matches* the value.
+Given a pattern input value ([§11.1](patterns.md#111-general)) *e*, if the *simple_designation* is a *discard_designation*, denoting a discard ([§9.2.9.2](variables.md#9292-discards)), the value of *e* is not bound to anything. Otherwise, if the *simple_designation* is a *single_variable_designation*, a local variable ([§9.2.9](variables.md#929-local-variables)) of type `T` named by the given identifier is introduced. That local variable is assigned the value of the pattern input value when the pattern *matches* the value.
 
 > *Note*: This treatment of `_` within a *declaration_pattern* differs from that of a standalone `_` written as a *pattern* ([§11.2.7](patterns.md#1127-discard-pattern)): in the latter case, an in-scope constant or type named `_`, if any, is *not* hidden. *end note*
 
-A type `E` is said to be ***pattern compatible*** with the type `T` if there exists an identity conversion, an implicit or explicit reference conversion, a boxing conversion, an unboxing conversion, or an implicit or explicit nullable value type conversion from `E` to `T`, or if either `E` or `T` is an open type ([§8.4.3](types.md#843-open-and-closed-types)). A declaration pattern naming a type `T` is *applicable to* ([§11.2.1](patterns.md#1121-general)) every type `E` for which `E` is pattern compatible with `T`. It is a compile-time error if a declaration pattern naming a type `T` is used to match a pattern input value ([§11.1](patterns.md#111-general)) whose static type `E` is not pattern compatible with `T`.
+A type `E` is said to be ***pattern compatible*** with the type `T` if there exists an identity conversion, an implicit or explicit reference conversion, a boxing conversion, an unboxing conversion, or an implicit or explicit nullable value type conversion from `E` to `T`, or if either `E` or `T` is an open type ([§8.4.3](types.md#843-open-and-closed-types)). A declaration pattern with a *pattern_type* that resolves to `T` is *applicable to* ([§11.2.1](patterns.md#1121-general)) every type `E` for which `E` is pattern compatible with `T`. It is a compile-time error if a declaration pattern with a *pattern_type* that resolves to `T` is used to match a pattern input value ([§11.1](patterns.md#111-general)) whose static type `E` is not pattern compatible with `T`.
 
 > *Note*: The support for open types can be most useful when checking types that may be either struct or class types, and boxing is to be avoided. *end note*
 <!-- markdownlint-disable MD028 -->
@@ -490,13 +561,16 @@ A *type_pattern* is used to test that the pattern input value ([§11.1](patterns
 
 ```ANTLR
 type_pattern
-    : type
+    : pattern_type
     ;
 ```
 
-A type pattern naming a type `T` is *applicable to* every type `E` for which `E` is *pattern compatible* with `T` ([§11.2.2](patterns.md#1122-declaration-pattern)).
+Let `T` be the type to which the *pattern_type* resolves
+(§pattern-types-new-clause).
 
-The runtime type of the value is tested against *type* using the same rules specified in the is-type operator ([§12.15.12.1](expressions.md#1215121-the-is-type-operator)). If the test succeeds, the pattern matches that value. It is a compile-time error if the *type* is a nullable type. This pattern form never matches a `null` value.
+A type pattern with a *pattern_type* that resolves to `T` is *applicable to* every type `E` for which `E` is *pattern compatible* with `T` ([§11.2.2](patterns.md#1122-declaration-pattern)).
+
+The runtime type of the value is tested against `T` using the same rules specified in the is-type operator ([§12.15.12.1](expressions.md#1215121-the-is-type-operator)). If the test succeeds, the pattern matches that value. It is a compile-time error if `T` is a nullable type. This pattern form never matches a `null` value.
 
 ### 11.2.9 Relational pattern
 
