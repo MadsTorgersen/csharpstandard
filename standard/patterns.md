@@ -147,34 +147,19 @@ types as follows:
 > type `int`.
 >
 > ```csharp
+> abstract record class Base<T>();
+> sealed record class Derived<T>(T Value) : Base<T>();
+>
 > int Use(Base<int> input)
 > {
->     if (input is Derived(var value))
->     {
->         return value;
->     }
->
+>     if (input is Derived(var value)) { return value; }
 >     ...
 > }
->
-> abstract record class Base<T>(T Value);
-> sealed record class Derived<T>(T Value) : Base<T>(Value);
 > ```
 >
-> The expression `input is Derived` also tests against the inferred type
-> `Derived<int>` through the is-pattern operator
-> ([§12.15.1](expressions.md#12151-general)).
+> If `sealed record class Derived()` is added to the example, it is not pattern-compatible with `Base<int>`, so `Derived<int>` is still picked.
 >
-> If `sealed class Derived {}` is added to the example, `Base<int>` is not
-> pattern compatible with that non-generic type. Both `input is Derived` and
-> `input is Derived(var value)` therefore infer `Derived<int>`. Replacing that
-> added declaration with `static class Derived {}` also causes both forms to
-> infer `Derived<int>`, since the non-generic static type is not permitted in the
-> pattern.
->
-> If the added non-generic type instead derives from `Base<int>`, both it and the
-> inferred `Derived<int>` are candidate types. The non-generic type is selected
-> because it did not require type inference.
+> However, if the added non-generic type instead derives from `Base<int>`, both it and the inferred `Derived<int>` are candidate types. The non-generic type is selected because it did not require type inference.
 >
 > *end example*
 
@@ -215,7 +200,7 @@ Given a pattern input value ([§11.1](patterns.md#111-general)) *e*, if the *sim
 
 > *Note*: This treatment of `_` within a *declaration_pattern* differs from that of a standalone `_` written as a *pattern* ([§11.2.7](patterns.md#1127-discard-pattern)): in the latter case, an in-scope constant or type named `_`, if any, is *not* hidden. *end note*
 
-A type `E` is said to be ***pattern compatible*** with the type `T` if there exists an identity conversion, an implicit or explicit reference conversion, a boxing conversion, an unboxing conversion, or an implicit or explicit nullable value type conversion from `E` to `T`, or if either `E` or `T` is an open type ([§8.4.3](types.md#843-open-and-closed-types)). A declaration pattern with a *pattern_type* that resolves to `T` is *applicable to* ([§11.2.1](patterns.md#1121-general)) every type `E` for which `E` is pattern compatible with `T`. It is a compile-time error if a declaration pattern with a *pattern_type* that resolves to `T` is used to match a pattern input value ([§11.1](patterns.md#111-general)) whose static type `E` is not pattern compatible with `T`.
+A type `E` is said to be ***pattern compatible*** with the type `T` if there exists an identity conversion, an implicit or explicit reference conversion, a boxing conversion, an unboxing conversion, or an implicit or explicit nullable value type conversion from `E` to `T`, or if either `E` or `T` is an open type ([§8.4.3](types.md#843-open-and-closed-types)).
 
 > *Note*: The support for open types can be most useful when checking types that may be either struct or class types, and boxing is to be avoided. *end note*
 <!-- markdownlint-disable MD028 -->
@@ -595,8 +580,6 @@ type_pattern
 
 Let `T` be the type to which the *pattern_type* resolves
 (§pattern-types-new-clause).
-
-A type pattern with a *pattern_type* that resolves to `T` is *applicable to* every type `E` for which `E` is *pattern compatible* with `T` ([§11.2.2](patterns.md#1122-declaration-pattern)).
 
 The runtime type of the value is tested against `T` using the same rules specified in the is-type operator ([§12.15.12.1](expressions.md#1215121-the-is-type-operator)). If the test succeeds, the pattern matches that value. It is a compile-time error if `T` is a nullable type. This pattern form never matches a `null` value.
 
