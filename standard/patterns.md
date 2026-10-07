@@ -94,36 +94,32 @@ pattern_type
 ```
 
 Given a pattern input value ([§11.1](patterns.md#111-general)) of static type
-`E`, a *pattern_type* is resolved as follows:
+`E`, the *type_group* is resolved to a set `G` as specified in
+§type-groups-new-clause, with the following context-specific exception. If
+resolution fails because a *type_group_name* is undefined, the same syntax is
+instead resolved as a *type*. If that resolution succeeds, `G` is a singleton
+set containing that type; otherwise, a compile-time error occurs. No other
+lookup error is suppressed by this exception.
 
-- If the *type_group* (§type-groups-new-clause) is a *type*, the
-  *pattern_type* resolves to that type.
-- Otherwise, type-group-name lookup (§type-group-names-new-clause) is performed.
-  In this context, an undefined *type_group_name* does not by itself cause a
-  compile-time error:
-  - If the *type_group_name* is undefined, the same syntax is instead resolved
-    as a *type*. If that resolution succeeds, the *pattern_type* resolves to
-    that type; otherwise, a compile-time error occurs.
-  - If type-group-name lookup is ambiguous, a compile-time error occurs.
-    Resolution as a *type* is not attempted.
-  - Otherwise, the *type_group_name* resolves to a set of unbound types `G`.
-    The following steps are applied to `G`:
-    - If `G` contains a type `T` that is not an unbound generic type, and both
-      of the following conditions hold, the *pattern_type* resolves to `T`.
-      No generic types in `G` are considered:
-      - `T` is permitted as the type in the containing pattern form.
-      - `E` is pattern compatible with `T`
-        ([§11.2.2](patterns.md#1122-declaration-pattern)).
-    - Otherwise, a set of candidate types is determined. For each unbound
-      generic type `C<X₁...Xᵥ>` in `G`, type inference
-      (§type-inference-for-type-patterns-new-clause) is applied. If inference
-      succeeds and the constructed type resulting from the inferred type
-      arguments satisfies its constraints
-      ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
-      candidate.
-    - If there is exactly one candidate type, the *pattern_type* resolves to
-      that type. Otherwise, a compile-time error occurs and the type in the
-      pattern shall be specified in full.
+The type to which the *pattern_type* resolves is selected from `G` as follows:
+
+- If `G` contains no unbound generic type, the *pattern_type* resolves to the
+  single type in `G`.
+- Otherwise, if `G` contains a type `T` that is not an unbound generic type,
+  and both of the following conditions hold, the *pattern_type* resolves to
+  `T`. No generic types in `G` are considered:
+  - `T` is permitted as the type in the containing pattern form.
+  - `E` is pattern compatible with `T`
+    ([§11.2.2](patterns.md#1122-declaration-pattern)).
+- Otherwise, a set of candidate types is determined. For each unbound generic
+  type `C<X₁...Xᵥ>` in `G`, type inference
+  (§type-inference-for-type-patterns-new-clause) is applied. If inference
+  succeeds and the constructed type resulting from the inferred type
+  arguments satisfies its constraints
+  ([§8.4.5](types.md#845-satisfying-constraints)), that constructed type is a
+  candidate. If there is exactly one candidate type, the *pattern_type*
+  resolves to that type. Otherwise, a compile-time error occurs and the type
+  in the pattern shall be specified in full.
 
 The resolved type is subject to all restrictions on the type in the containing
 pattern form.
