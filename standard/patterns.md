@@ -95,11 +95,7 @@ pattern_type
 
 Given a pattern input value ([§11.1](patterns.md#111-general)) of static type
 `E`, the *type_group* is resolved to a set `G` as specified in
-§type-groups-new-clause, with the following context-specific exception. If
-resolution fails because a *type_group_name* is undefined, the same syntax is
-instead resolved as a *type*. If that resolution succeeds, `G` is a singleton
-set containing that type; otherwise, a compile-time error occurs. No other
-lookup error is suppressed by this exception.
+§type-groups-new-clause.
 
 The type to which the *pattern_type* resolves is selected from `G` as follows:
 
@@ -123,11 +119,6 @@ The type to which the *pattern_type* resolves is selected from `G` as follows:
 
 The resolved type is subject to all restrictions on the type in the containing
 pattern form.
-
-> *Note*: The fallback to resolution as a *type* preserves references to type
-> parameters and aliases for constructed types, which are not unbound types
-> and therefore do not produce a defined *type_group_name*. It does not bypass
-> ambiguity in type-group-name lookup. *end note*
 
 > *Example*: Both declaration patterns below retain ordinary type resolution.
 > The variable `item` has type `T`, and the variable `list` has type
