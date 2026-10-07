@@ -119,8 +119,7 @@ types as follows:
 - Otherwise, if there are multiple candidate types and exactly one was taken
   directly from `G` without type inference, the *pattern_type* resolves to that
   type.
-- Otherwise, a compile-time error occurs and the type in the pattern shall be
-  specified in full.
+- Otherwise, a compile-time error occurs.
 
 > *Example*: Both declaration patterns below retain ordinary type resolution.
 > The variable `item` has type `T`, and the variable `list` has type
