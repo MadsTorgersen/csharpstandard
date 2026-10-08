@@ -5105,35 +5105,7 @@ right thing, maybe not obviously for some, and so no change was made – making
 as it does not effect the resulting parse at all, but the prose gets messier. For C#9 this decision should be checked to be
 still valid after the new pattern changes.
 -->
-When recognising a *relational_expression* of the form `E is R`, the following
-rules apply in order:
-
-- If `R` can be recognised as a *type_group_name* and `R` does not resolve as a
-  constant expression, type-group-name lookup (§type-group-names-new-clause)
-  is attempted:
-  - If the lookup is ambiguous, a compile-time error occurs.
-  - If it succeeds and the resulting group contains an unbound generic type,
-    the *relational_expression* `is` *pattern* alternative with a
-    *type_pattern* shall be chosen. Its *pattern_type* is resolved as specified
-    in §pattern-types-new-clause.
-  - Otherwise, including when the *type_group_name* is undefined, no
-    interpretation is selected by this rule.
-- If no interpretation has been selected, both the *relational_expression*
-  `is` *type* and *relational_expression* `is` *pattern* alternatives are
-  applicable, and `R` resolves as a *type* to an accessible type, then the
-  *relational_expression* `is` *type* alternative shall be chosen.
-- If no interpretation has been selected, `R` can be recognised as a
-  *type_pattern*, and `R` does not resolve as a constant expression, the
-  *relational_expression* `is` *pattern* alternative with that *type_pattern*
-  shall be chosen. Its *pattern_type* is resolved as specified in
-  §pattern-types-new-clause.
-
-> *Note*: For a name with generic alternatives, all bound and inferred types
-> are first filtered for whether they are permitted and pattern compatible. If
-> multiple candidate types remain, a bound type that did not require inference
-> is preferred. Explicit types and names without generic alternatives retain
-> ordinary is-type handling, including its treatment of nullable value types.
-> Constant-pattern binding is unchanged. *end note*
+When recognising a *relational_expression* ([§12.15.1](expressions.md#12151-general)) if both the “*relational_expression* `is` *type*” and “*relational_expression* `is` *pattern*” alternatives are applicable, and *type* resolves to an accessible type, then the “*relational_expression* `is` *type*” alternative shall be chosen.
 
 The `is` operator is described in [§12.15.12](expressions.md#121512-the-is-operator) and the `as` operator is described in [§12.15.13](expressions.md#121513-the-as-operator).
 
