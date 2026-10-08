@@ -121,7 +121,7 @@ types as follows:
   type.
 - Otherwise, a compile-time error occurs.
 
-> *Example*: Both declaration patterns below retain ordinary type resolution.
+> *Example*:
 > The variable `item` has type `T`, and the variable `list` has type
 > `System.Collections.Generic.List<int>`. Neither pattern requires type
 > inference.
