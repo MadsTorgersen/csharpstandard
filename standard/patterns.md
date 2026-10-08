@@ -85,7 +85,7 @@ The order of evaluation of operations and side effects during pattern-matching (
 ### §pattern-types-new-clause Pattern types
 
 A *pattern_type* identifies the type tested by a *declaration_pattern*,
-*type_pattern*, or typed *positional_pattern*.
+*type_pattern*, typed *positional_pattern*, or typed *property_pattern*.
 
 ```ANTLR
 pattern_type
@@ -156,6 +156,9 @@ types as follows:
 >     ...
 > }
 > ```
+>
+> The property pattern `input is Derived { Value: var value }` likewise
+> resolves `Derived` to `Derived<int>`.
 >
 > If `sealed record class Derived()` is added to the example, it is not pattern-compatible with `Base<int>`, so `Derived<int>` is still picked.
 >
@@ -404,7 +407,7 @@ A *property_pattern* checks that the input value is not `null`, and recursively 
 
 ```ANTLR
 property_pattern
-    : type? property_subpattern simple_designation?
+    : pattern_type? property_subpattern simple_designation?
     ;
 property_subpattern
     : '{' '}'
@@ -413,8 +416,6 @@ property_subpattern
 ```
 
 It is an error if any *subpattern* of a *property_pattern* does not contain a *subpattern_name*.
-
-It is a compile-time error if the *type* is a nullable value type ([§8.3.12](types.md#8312-nullable-value-types)) or a nullable reference type ([§8.9.3](types.md#893-nullable-reference-types)).
 
 > *Note*: A null-checking pattern falls out of a trivial property pattern. To check if the string `s` is non-null, one can write any of the following forms:
 >
@@ -431,7 +432,16 @@ It is a compile-time error if the *type* is a nullable value type ([§8.3.12](ty
 > The example declaring `x2` is similar to `if (s is var x2)` in terms of inferring the variable type, but the property pattern guarantees that `x2` is non-null.
 > *end note*
 
-Given a match of an expression *e* to the pattern *type* `{` *subpatterns* `}`, it is a compile-time error if the expression *e* is not pattern compatible ([§11.2.2](patterns.md#1122-declaration-pattern)) with the type *T* designated by *type*. If the type is absent, the type is assumed to be the static type of *e*. Each *subpattern_name* appearing on the left-hand-side of its *subpatterns* shall designate an accessible readable property or field of *T*. If the *simple_designation* of the *property_pattern* is present, it declares a pattern variable of type *T*.
+Given a match of an expression *e* to a *property_pattern*, let *T* be the type
+to which the *pattern_type* resolves (§pattern-types-new-clause) if the
+*pattern_type* is present; otherwise, let *T* be the static type of *e*. It is a
+compile-time error if the *pattern_type* is present and *T* is either a nullable
+value type ([§8.3.12](types.md#8312-nullable-value-types)) or a nullable
+reference type ([§8.9.3](types.md#893-nullable-reference-types)). Each
+*subpattern_name* appearing on the left-hand-side of its *subpatterns* shall
+designate an accessible readable property or field of *T*. If the
+*simple_designation* of the *property_pattern* is present, it declares a
+pattern variable of type *T*.
 
 At runtime, the expression is tested against *T*. If this fails then the property pattern match fails, and the result is `false`. If it succeeds, then each *property_subpattern* field or property is read, and its value matched against its corresponding pattern. The result of the whole match is `false` only if the result of any of these is `false`. The order in which subpatterns are matched is not specified, and a failed match may not test all subpatterns at runtime. If the match succeeds and the *simple_designation* of the *property_pattern* is a *single_variable_designation*, the declared variable is assigned the matched value.
 
@@ -666,12 +676,9 @@ It is a compile-time error for a pattern variable to be declared beneath a `not`
 
 In a *conjunctive_pattern*, the *input type* of the second pattern is narrowed by the *type narrowing* requirements of first pattern of the `and`. The *narrowed type* of a pattern `P` is defined as follows:
 
-- If `P` is a type pattern, the *narrowed type* is the type of the type pattern’s type.
-- Otherwise, if `P` is a declaration pattern, the *narrowed type* is the type of the declaration pattern’s type.
-- Otherwise, if `P` is a positional pattern with a *pattern_type*, the
-  *narrowed type* is the type to which that *pattern_type* resolves.
-- Otherwise, if `P` is another recursive pattern that gives an explicit type,
-  the *narrowed type* is that type.
+- If `P` is a type pattern, declaration pattern, or recursive pattern with a
+  *pattern_type*, the *narrowed type* is the type to which that *pattern_type*
+  resolves.
 - Otherwise, if `P` is matched via the rules for `ITuple` in a *positional_pattern* ([§11.2.5](patterns.md#1125-positional-pattern)), the *narrowed type* is the type `System.ITuple`.
 - Otherwise, if `P` is a constant pattern where the constant is not the null constant and where the expression has no *constant expression conversion* to the *input type*, the *narrowed type* is the type of the constant.
 - Otherwise, if `P` is a relational pattern where the constant expression has no *constant expression conversion* to the *input type*, the *narrowed type* is the type of the constant.
