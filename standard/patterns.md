@@ -141,8 +141,8 @@ types as follows:
 
 > *Example*: In the following example, the pattern input has type
 > `Base<int>`. The *pattern_type* `Derived` resolves to the type group containing
-> `Derived<T>`. Type inference uses `Base<int>` as its by-value target type and
-> `Derived<T>` as its by-value result type, and infers `int` for `T`. The
+> `Derived<T>`. Type inference uses `Base<int>` as its target type and
+> `Derived<T>` as its result type, and infers `int` for `T`. The
 > positional pattern therefore tests against `Derived<int>`, and `value` has
 > type `int`.
 >
