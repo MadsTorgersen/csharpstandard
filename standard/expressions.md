@@ -884,6 +884,7 @@ A *lower-bound inference from* a type `U` *to* a type `V` is made as follows:
 
 - If `V` is one of the *unfixed* `Xᵢ` then `U` is added to the set of lower bounds for `Xᵢ`.
 - Otherwise, if `V` is the type `V₁?` and `U` is the type `U₁?` then a lower bound inference is made from `U₁` to `V₁`.
+- Otherwise, if `V` is a union type with a unique case type `K` that can, by substitution of types for unfixed type variables, be made a type such that `U` (or, if `U` is a type parameter, its effective base class or any member of its effective interface set) is identical to, inherits from (directly or indirectly), or implements (directly or indirectly) that type, then a lower-bound inference is made from `U` to `K`.
 - Otherwise, sets `U₁...Uₑ` and `V₁...Vₑ` are determined by checking if any of the following cases apply:
   - `V` is an array type `V₁[...]`and `U` is an array type `U₁[...]`of the same rank
   - `V` is one of `IEnumerable<V₁>`, `ICollection<V₁>`, `IReadOnlyList<V₁>>`, `IReadOnlyCollection<V₁>` or `IList<V₁>` and `U` is a single-dimensional array type `U₁[]`
@@ -914,6 +915,7 @@ A *lower-bound inference from* a type `U` *to* a type `V` is made as follows:
 An *upper-bound inference from* a type `U` *to* a type `V` is made as follows:
 
 - If `V` is one of the *unfixed* `Xᵢ` then `U` is added to the set of upper bounds for `Xᵢ`.
+- Otherwise, if `U` is a union type with a unique case type `K` such that `V` can, by substitution of types for unfixed type variables, be made identical to `K` or made a type that inherits from or implements `K`, then an upper-bound inference is made from `K` to `V`.
 - Otherwise, sets `V₁...Vₑ` and `U₁...Uₑ` are determined by checking if any of the following cases apply:
   - `U` is an array type `U₁[...]`and `V` is an array type `V₁[...]`of the same rank
   - `U` is one of `IEnumerable<Uₑ>`, `ICollection<Uₑ>`, `IReadOnlyList<Uₑ>`, `IReadOnlyCollection<Uₑ>` or `IList<Uₑ>` and `V` is a single-dimensional array type `Vₑ[]`
